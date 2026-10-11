@@ -1,0 +1,1552 @@
+{
+ "generated": "2026-10-11T06:51:51Z",
+ "sim_assumptions": {
+  "pod_heat_W": 960000.0,
+  "pod_D_m": 3.2,
+  "pod_L_m": 12.0,
+  "hull_area_m2": 121.0,
+  "fin_factor": 1.5,
+  "rho_cp": 4100000.0,
+  "sea_T_C": 4.0,
+  "sea_T_range": [
+   0.0,
+   10.0
+  ],
+  "depth_m": 150.0,
+  "current_default": 0.2,
+  "current_range": [
+   0.01,
+   0.5
+  ],
+  "U_still": 200.0,
+  "U_per_ms": 1200.0,
+  "supply_C": [
+   18.0,
+   32.0
+  ],
+  "loop_dT_K": 10.0,
+  "wind_mean_base": 10.5,
+  "wind_mean_range": [
+   9.0,
+   12.0
+  ],
+  "weibull_k": 2.2,
+  "ar1_rho": 0.985,
+  "overbuild": 2.0,
+  "storage_h": 12.0,
+  "storage_eta": 0.95,
+  "cut_in": 3.0,
+  "rated": 10.6,
+  "cut_out": 25.0,
+  "wake_losses": 0.9,
+  "hub_height_m": 150.0,
+  "ref_height_m": 100.0
+ },
+ "sites": {
+  "drake": {
+   "key": "drake",
+   "name": "Drake Passage",
+   "lat": -58.5,
+   "lon": -63.0,
+   "note": "Narrowest ACC choke point; strongest flow, roughest seas"
+  },
+  "kerguelen": {
+   "key": "kerguelen",
+   "name": "Kerguelen Plateau, south",
+   "lat": -55.0,
+   "lon": 75.0,
+   "note": "Indian-sector ACC, plateau-steered flow"
+  },
+  "pacific": {
+   "key": "pacific",
+   "name": "SE Pacific ACC",
+   "lat": -57.0,
+   "lon": -120.0,
+   "note": "Open Pacific sector, far from land"
+  },
+  "chile": {
+   "key": "chile",
+   "name": "Offshore southern Chile",
+   "lat": -53.5,
+   "lon": -76.5,
+   "note": "Near-shore stage control; sits north of the ACC core"
+  }
+ },
+ "results": {
+  "drake": [
+   {
+    "id": "C1",
+    "title": "Sea temperature at pod depth",
+    "assumption": "4.0 C at 150 m, slider range 0.0-10.0 C",
+    "observed": {
+     "n_profiles": 589,
+     "years": "2019-2024",
+     "p5": -0.603,
+     "p25": 0.433,
+     "p50": 1.222,
+     "p75": 3.652,
+     "p95": 5.085,
+     "mean": 1.872,
+     "frac_inside_slider_range": 0.852,
+     "salinity_median": 34.109
+    },
+    "verdict": "marginal",
+    "finding": "Observed median 1.2 C, colder than the 4.0 C default; 85% of profiles fall inside the slider range. Colder sea helps heat rejection, so a warm default is the conservative side.",
+    "sim_change": "Set the default sea temperature to about 1.2 C for this site; keep the 0-10 C range.",
+    "sources": [
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C2",
+    "title": "Current speed at pod depth",
+    "assumption": "0.2 m/s typical, slider 0.01-0.5 m/s",
+    "observed": {
+     "n_samples": 984,
+     "months": [
+      "2023-01",
+      "2023-04",
+      "2023-07",
+      "2023-10"
+     ],
+     "p5": 0.05,
+     "p25": 0.102,
+     "p50": 0.158,
+     "p75": 0.242,
+     "p95": 0.506,
+     "p99": 0.659,
+     "max": 0.851,
+     "frac_below_slack": 0.05,
+     "slack_threshold": 0.05,
+     "frac_inside_slider_range": 0.944,
+     "direction_steadiness": 0.565,
+     "mean_u": 0.109,
+     "mean_v": 0.021
+    },
+    "verdict": "supported",
+    "finding": "Median 0.16 m/s (P5 0.05, P95 0.51); 5.0% of 3-hourly samples are below 0.05 m/s; direction steadiness 0.57 (1 = one-way flow).",
+    "sim_change": "Add this site's P5/P50/P95 as presets on the current slider; model slack water as a first-class case.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C3",
+    "title": "Seawater volumetric heat capacity",
+    "assumption": "rho*cp = 4.1 MJ/m3/K; nu = 1.56e-6 m2/s in the Reynolds readout",
+    "observed": {
+     "T_C": 1.22,
+     "S_psu": 34.11,
+     "rho": 1028.0,
+     "cp": 3986.8,
+     "rho_cp_MJ": 4.0985,
+     "nu_m2s": 1.7760026014611879e-06,
+     "k_W_mK": 0.5717,
+     "Pr": 12.73,
+     "rho_cp_error": 0.0004,
+     "nu_error": 0.1216
+    },
+    "verdict": "supported",
+    "finding": "TEOS-10 gives rho*cp = 4.099 MJ/m3/K at 1.2 C (0.0% from the sim). Kinematic viscosity is 1.78e-6 m2/s, so the Reynolds readout is 12% high.",
+    "sim_change": "Change the Reynolds readout to use nu = 1.62e-6 m2/s at 4 C (minor).",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C4",
+    "title": "Hull heat-transfer coefficient U",
+    "assumption": "U = 200 + 1200 v  W/m2K (200 still, 800 at 0.5 m/s)",
+    "observed": {
+     "v_p10": {
+      "v": 0.066,
+      "U_physics": 243.0,
+      "U_sim": 280.0,
+      "h_out": 404.0,
+      "ratio_sim_over_physics": 1.15
+     },
+     "v_p50": {
+      "v": 0.158,
+      "U_physics": 252.0,
+      "U_sim": 389.0,
+      "h_out": 428.0,
+      "ratio_sim_over_physics": 1.54
+     },
+     "v_p90": {
+      "v": 0.377,
+      "U_physics": 296.0,
+      "U_sim": 652.0,
+      "h_out": 574.0,
+      "ratio_sim_over_physics": 2.2
+     },
+     "U_physics_still": 242.0,
+     "U_physics_at_0_5": 323.0,
+     "U_sim_still": 200,
+     "U_sim_at_0_5": 800,
+     "series_resistance_cap_W_m2K": 612.0,
+     "coolant_C": 27.0,
+     "sea_C": 1.22,
+     "wall_T_still_C": 16.8
+    },
+    "verdict": "contradicted",
+    "finding": "Still-water U matches (242 vs 200) because turbulent natural convection is strong at a 25 K wall-sea difference, but the sim's slope is too steep: at 0.5 m/s physics gives 323 against 800, since the glycol side, steel wall and fouling cap U at about 612 W/m2K and the outside film is no longer the only resistance. Worst sim/physics ratio across P10-P90 currents is 2.2x.",
+    "sim_change": "Replace the sim's U with a curve fitted to the physics: roughly 242 W/m2K still rising to 323 at 0.5 m/s. Inner-side h and fouling are my [A] values and the slope is sensitive to them.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C5",
+    "title": "Can the hull reject 0.96 MW?",
+    "assumption": "Hull area x1.5 (U = 200 + 1200 v) rejects the full pod load at a normal 22 to 32 C loop",
+    "observed": {
+     "sea_C": 1.22,
+     "fin_efficiency_assumed": 0.85,
+     "supply_temp_needed": {
+      "p5": {
+       "v": 0.05,
+       "supply_C": 20.0
+      },
+      "p50": {
+       "v": 0.158,
+       "supply_C": 19.2
+      },
+      "p95": {
+       "v": 0.506,
+       "supply_C": 14.2
+      }
+     },
+     "supply_temp_needed_with_sim_U": {
+      "p5": 17.0,
+      "p50": 10.4,
+      "p95": 4.0
+     },
+     "limit_no_throttle_C": 27.0,
+     "vendor_spec_max_C": 32.0,
+     "capacity_MW_p50_at_22_32C_loop": 1.11,
+     "frac_time_22_32C_loop_enough": 1.0,
+     "bare_hull_area_factor_needed_p99_at_22_32C": 1.29
+    },
+    "verdict": "supported",
+    "finding": "To reject 0.96 MW with the x1.5 hull (fins at 85% efficiency) at this site's weakest-current case (P5, 0.05 m/s), the coolant supply must be 20.0 C; at the median current 19.2 C. The sim's own U would say 17.0 C. Full-power operation without throttling needs a supply of 27 C or less (chip model Tj = coolant + 38 K, throttle at 70 C); the vendor maximum is 32 C.",
+    "sim_change": "If the needed supply is above 27 C, add area (target bare-hull factor of about 1.3 before fin efficiency) or plan on throttling during weak-current periods.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C6",
+    "title": "Bulk warming of the water passing a pod",
+    "assumption": "0.03 K for one pod at 0.2 m/s; 10 pods in the same stream add linearly",
+    "observed": {
+     "one_pod_K": {
+      "p50": 0.039,
+      "p95": 0.122,
+      "p99": 0.237
+     },
+     "ten_pods_in_line_K": {
+      "p50": 0.387,
+      "p95": 1.219,
+      "p99": 2.368
+     },
+     "limit_K": 0.5,
+     "frac_time_ten_pods_over_limit": 0.3313,
+     "v_floor_ms": 0.02
+    },
+    "verdict": "marginal",
+    "finding": "Ten in-line pods warm the passing water by 0.39 K at the median current and 1.22 K at P95; it exceeds the 0.5 K illustrative limit 33.1% of the time. Values below 0.02 m/s are floored there, where the real plume turns buoyant and rises instead of diluting.",
+    "sim_change": "Stagger pods across the stream (cross-flow spacing) so no pod sits in another's wake, and agree a real ecological limit with the ecology team.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C7",
+    "title": "Hub-height wind resource",
+    "assumption": "mean 10.5 m/s (range 9.0-12.0), Weibull k = 2.2",
+    "observed": {
+     "hours": 87672,
+     "years": "2015-2024",
+     "mean_hub_ms": 12.58,
+     "shear_exponent_fitted": 0.115,
+     "weibull_k": 2.82,
+     "weibull_scale": 14.1,
+     "capacity_factor_per_turbine": 0.719,
+     "year_mean_min": 11.68,
+     "year_mean_max": 13.29,
+     "frac_hours_below_cut_in": 0.02,
+     "frac_hours_above_rated": 0.661,
+     "frac_hours_above_cut_out": 0.0068,
+     "cross_check": {
+      "overlap_years": [
+       2015,
+       2016,
+       2017,
+       2018,
+       2019,
+       2020,
+       2021,
+       2022
+      ],
+      "era5_100m_mean": 12.23,
+      "merra2_100m_mean": 11.99,
+      "era5_over_merra2_pct": 2.0,
+      "hourly_correlation": 0.948
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "MERRA-2 gives a mean of 12.6 m/s at 150 m (shear exponent 0.115 fitted from 10 m and 50 m, extrapolated), 2.1 m/s above the 10.5 m/s base case. Weibull k fits at 2.82 (sim 2.2). Capacity factor per turbine 72% with the capex model's power curve and 10% losses. Cross-check: ERA5 100 m is +2.0% against MERRA-2 over 8 common years (hourly correlation 0.95).",
+    "sim_change": "Use 12.6 m/s as this site's base wind. Reanalyses smooth gusts and wakes, and the 50 m to 150 m extrapolation adds uncertainty, so treat it as slightly optimistic.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)",
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C8",
+    "title": "Wind gaps: share of load served at 2x overbuild + 12 h storage",
+    "assumption": "Synthetic Weibull + AR(1, rho 0.985) wind, served fraction from the capex model",
+    "observed": {
+     "served_real": 0.944,
+     "served_synthetic_same_mean": 0.84,
+     "served_capex_base_case_synthetic": 0.779,
+     "difference": 0.104,
+     "min_overbuild_at_12h_storage": {
+      "served_90pct": 1.4,
+      "served_95pct": 2.2
+     },
+     "served_by_year_min": 0.915,
+     "served_by_year_max": 0.97,
+     "lull_below_5ms_real": {
+      "frac_below": 0.0612966511543024,
+      "n_runs": 681,
+      "longest_h": 57,
+      "p95_run_h": 24.0,
+      "mean_run_h": 7.891336270190895
+     },
+     "lull_below_5ms_synthetic": {
+      "frac_below": 0.10439497716894977,
+      "n_runs": 1088,
+      "longest_h": 174,
+      "p95_run_h": 37.0,
+      "mean_run_h": 8.405330882352942
+     },
+     "lag1_autocorr_real": 0.9862,
+     "lag1_autocorr_synthetic": 0.9852,
+     "served_grid": {
+      "over1.5_store0h": 0.838,
+      "over1.5_store12h": 0.918,
+      "over1.5_store24h": 0.942,
+      "over1.5_store48h": 0.961,
+      "over2.0_store0h": 0.866,
+      "over2.0_store12h": 0.944,
+      "over2.0_store24h": 0.967,
+      "over2.0_store48h": 0.983,
+      "over3.0_store0h": 0.896,
+      "over3.0_store12h": 0.964,
+      "over3.0_store24h": 0.98,
+      "over3.0_store48h": 0.99
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "With real hourly wind the 2x/12 h design serves 94.4% of the load, against 84.0% for the synthetic series at the same mean (10.4 points more). Years vary from 91.5% to 97.0%. Longest stretch below 5 m/s is 57 h in reality versus 174 h synthetic. The capex base case (synthetic, 10.5 m/s mean) serves 77.9%. A 90% served fraction needs only 1.4x overbuild with 12 h storage here.",
+    "sim_change": "Replace the synthetic wind in capex_model.py with this site's ERA5 series; use the served_grid to re-pick overbuild and storage.",
+    "sources": [
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C9",
+    "title": "Sea state for pod swaps (72 h windows)",
+    "assumption": "An annual service/recovery campaign is possible (capex model: $8M/yr)",
+    "observed": {
+     "hours": 28509,
+     "period": "2021-10 to 2024-12",
+     "Hs_p50": 3.52,
+     "Hs_p95": 6.22,
+     "Hs_p99": 7.6,
+     "Hs_max": 12.42,
+     "service_limit_Hs": 2.5,
+     "windows": {
+      "Hs<2.0": {
+       "annual": 0.0,
+       "best_month": 6,
+       "best_month_frac": 0.003,
+       "best_3mo_frac": 0.001
+      },
+      "Hs<2.5": {
+       "annual": 0.005,
+       "best_month": 6,
+       "best_month_frac": 0.027,
+       "best_3mo_frac": 0.016
+      },
+      "Hs<3.0": {
+       "annual": 0.045,
+       "best_month": 6,
+       "best_month_frac": 0.114,
+       "best_3mo_frac": 0.072
+      },
+      "Hs<3.5": {
+       "annual": 0.126,
+       "best_month": 3,
+       "best_month_frac": 0.277,
+       "best_3mo_frac": 0.216
+      }
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "Median significant wave height is 3.5 m and the 99th percentile 7.6 m (max 12.4 m). A 72 h window with Hs under 2.5 m is open 0.5% of hours over the year and 1.6% in the best three months (month 6).",
+    "sim_change": "Budget weather standby days in the campaign cost, size the work for Hs 3 m or more with a DP vessel, or shorten the swap procedure below 72 h.",
+    "sources": [
+     "Open-Meteo marine archive, wave model reanalysis from April 2021 (marine-api.open-meteo.com)"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C10",
+    "title": "Cost per GPU-hour with real wind",
+    "assumption": "Base case: $5.66 per sold GPU-hour (synthetic wind, 2x overbuild, 12 h storage), terrestrial $2.61",
+    "observed": {
+     "base_per_hr": 5.66,
+     "base_served": 0.786,
+     "real_wind_same_config_per_hr": 4.71,
+     "real_wind_served": 0.944,
+     "cost_change_pct": -16.8,
+     "best_config": {
+      "overbuild": 1.5,
+      "storage_h": 12,
+      "served": 0.918,
+      "per_hr": 4.59,
+      "capex_M": 907.0
+     },
+     "best_vs_base_pct": -18.9,
+     "terrestrial_per_hr": 2.61,
+     "best_premium_vs_terrestrial_pct": 76.0
+    },
+    "verdict": "contradicted",
+    "finding": "With this site's real wind the base design costs $4.71 per sold GPU-hour (-17% against the capex base case $5.66) because it serves 94% instead of 79%. Re-optimised (1.5x overbuild, 12 h storage) it reaches $4.59, -19% against base and +76% against terrestrial ($2.61). Everything else in the capex model is unchanged.",
+    "sim_change": "Feed each site's wind series into capex_model.py and re-pick overbuild and storage; wind capex and storage are the levers that move.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)"
+    ],
+    "direction": "better"
+   }
+  ],
+  "kerguelen": [
+   {
+    "id": "C1",
+    "title": "Sea temperature at pod depth",
+    "assumption": "4.0 C at 150 m, slider range 0.0-10.0 C",
+    "observed": {
+     "n_profiles": 528,
+     "years": "2019-2024",
+     "p5": -0.464,
+     "p25": 0.592,
+     "p50": 1.032,
+     "p75": 1.374,
+     "p95": 1.946,
+     "mean": 0.924,
+     "frac_inside_slider_range": 0.896,
+     "salinity_median": 33.932
+    },
+    "verdict": "marginal",
+    "finding": "Observed median 1.0 C, colder than the 4.0 C default; 90% of profiles fall inside the slider range. Colder sea helps heat rejection, so a warm default is the conservative side.",
+    "sim_change": "Set the default sea temperature to about 1.0 C for this site; keep the 0-10 C range.",
+    "sources": [
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C2",
+    "title": "Current speed at pod depth",
+    "assumption": "0.2 m/s typical, slider 0.01-0.5 m/s",
+    "observed": {
+     "n_samples": 984,
+     "months": [
+      "2023-01",
+      "2023-04",
+      "2023-07",
+      "2023-10"
+     ],
+     "p5": 0.01,
+     "p25": 0.026,
+     "p50": 0.046,
+     "p75": 0.074,
+     "p95": 0.137,
+     "p99": 0.178,
+     "max": 0.201,
+     "frac_below_slack": 0.544,
+     "slack_threshold": 0.05,
+     "frac_inside_slider_range": 0.954,
+     "direction_steadiness": 0.367,
+     "mean_u": -0.009,
+     "mean_v": 0.018
+    },
+    "verdict": "contradicted",
+    "finding": "Median 0.05 m/s (P5 0.01, P95 0.14); 54.4% of 3-hourly samples are below 0.05 m/s; direction steadiness 0.37 (1 = one-way flow).",
+    "sim_change": "Add this site's P5/P50/P95 as presets on the current slider; model slack water as a first-class case.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C3",
+    "title": "Seawater volumetric heat capacity",
+    "assumption": "rho*cp = 4.1 MJ/m3/K; nu = 1.56e-6 m2/s in the Reynolds readout",
+    "observed": {
+     "T_C": 1.03,
+     "S_psu": 33.93,
+     "rho": 1027.9,
+     "cp": 3987.8,
+     "rho_cp_MJ": 4.099,
+     "nu_m2s": 1.7869333197449268e-06,
+     "k_W_mK": 0.5714,
+     "Pr": 12.82,
+     "rho_cp_error": 0.0002,
+     "nu_error": 0.127
+    },
+    "verdict": "supported",
+    "finding": "TEOS-10 gives rho*cp = 4.099 MJ/m3/K at 1.0 C (0.0% from the sim). Kinematic viscosity is 1.79e-6 m2/s, so the Reynolds readout is 13% high.",
+    "sim_change": "Change the Reynolds readout to use nu = 1.62e-6 m2/s at 4 C (minor).",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C4",
+    "title": "Hull heat-transfer coefficient U",
+    "assumption": "U = 200 + 1200 v  W/m2K (200 still, 800 at 0.5 m/s)",
+    "observed": {
+     "v_p10": {
+      "v": 0.016,
+      "U_physics": 241.0,
+      "U_sim": 219.0,
+      "h_out": 399.0,
+      "ratio_sim_over_physics": 0.91
+     },
+     "v_p50": {
+      "v": 0.046,
+      "U_physics": 242.0,
+      "U_sim": 255.0,
+      "h_out": 400.0,
+      "ratio_sim_over_physics": 1.05
+     },
+     "v_p90": {
+      "v": 0.105,
+      "U_physics": 246.0,
+      "U_sim": 326.0,
+      "h_out": 411.0,
+      "ratio_sim_over_physics": 1.33
+     },
+     "U_physics_still": 241.0,
+     "U_physics_at_0_5": 323.0,
+     "U_sim_still": 200,
+     "U_sim_at_0_5": 800,
+     "series_resistance_cap_W_m2K": 612.0,
+     "coolant_C": 27.0,
+     "sea_C": 1.03,
+     "wall_T_still_C": 16.8
+    },
+    "verdict": "marginal",
+    "finding": "Still-water U matches (241 vs 200) because turbulent natural convection is strong at a 25 K wall-sea difference, but the sim's slope is too steep: at 0.5 m/s physics gives 323 against 800, since the glycol side, steel wall and fouling cap U at about 612 W/m2K and the outside film is no longer the only resistance. Worst sim/physics ratio across P10-P90 currents is 1.3x.",
+    "sim_change": "Replace the sim's U with a curve fitted to the physics: roughly 241 W/m2K still rising to 323 at 0.5 m/s. Inner-side h and fouling are my [A] values and the slope is sensitive to them.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C5",
+    "title": "Can the hull reject 0.96 MW?",
+    "assumption": "Hull area x1.5 (U = 200 + 1200 v) rejects the full pod load at a normal 22 to 32 C loop",
+    "observed": {
+     "sea_C": 1.03,
+     "fin_efficiency_assumed": 0.85,
+     "supply_temp_needed": {
+      "p5": {
+       "v": 0.01,
+       "supply_C": 20.0
+      },
+      "p50": {
+       "v": 0.046,
+       "supply_C": 19.9
+      },
+      "p95": {
+       "v": 0.137,
+       "supply_C": 19.3
+      }
+     },
+     "supply_temp_needed_with_sim_U": {
+      "p5": 21.3,
+      "p50": 17.2,
+      "p95": 11.1
+     },
+     "limit_no_throttle_C": 27.0,
+     "vendor_spec_max_C": 32.0,
+     "capacity_MW_p50_at_22_32C_loop": 1.07,
+     "frac_time_22_32C_loop_enough": 1.0,
+     "bare_hull_area_factor_needed_p99_at_22_32C": 1.28
+    },
+    "verdict": "supported",
+    "finding": "To reject 0.96 MW with the x1.5 hull (fins at 85% efficiency) at this site's weakest-current case (P5, 0.01 m/s), the coolant supply must be 20.0 C; at the median current 19.9 C. The sim's own U would say 21.3 C. Full-power operation without throttling needs a supply of 27 C or less (chip model Tj = coolant + 38 K, throttle at 70 C); the vendor maximum is 32 C.",
+    "sim_change": "If the needed supply is above 27 C, add area (target bare-hull factor of about 1.3 before fin efficiency) or plan on throttling during weak-current periods.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C6",
+    "title": "Bulk warming of the water passing a pod",
+    "assumption": "0.03 K for one pod at 0.2 m/s; 10 pods in the same stream add linearly",
+    "observed": {
+     "one_pod_K": {
+      "p50": 0.133,
+      "p95": 0.305,
+      "p99": 0.305
+     },
+     "ten_pods_in_line_K": {
+      "p50": 1.334,
+      "p95": 3.049,
+      "p99": 3.049
+     },
+     "limit_K": 0.5,
+     "frac_time_ten_pods_over_limit": 0.9319,
+     "v_floor_ms": 0.02
+    },
+    "verdict": "contradicted",
+    "finding": "Ten in-line pods warm the passing water by 1.33 K at the median current and 3.05 K at P95; it exceeds the 0.5 K illustrative limit 93.2% of the time. Values below 0.02 m/s are floored there, where the real plume turns buoyant and rises instead of diluting.",
+    "sim_change": "Stagger pods across the stream (cross-flow spacing) so no pod sits in another's wake, and agree a real ecological limit with the ecology team.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C7",
+    "title": "Hub-height wind resource",
+    "assumption": "mean 10.5 m/s (range 9.0-12.0), Weibull k = 2.2",
+    "observed": {
+     "hours": 87672,
+     "years": "2015-2024",
+     "mean_hub_ms": 14.13,
+     "shear_exponent_fitted": 0.09,
+     "weibull_k": 2.96,
+     "weibull_scale": 15.81,
+     "capacity_factor_per_turbine": 0.757,
+     "year_mean_min": 13.26,
+     "year_mean_max": 14.64,
+     "frac_hours_below_cut_in": 0.011,
+     "frac_hours_above_rated": 0.749,
+     "frac_hours_above_cut_out": 0.0182,
+     "cross_check": {
+      "overlap_years": [
+       2015,
+       2016,
+       2017,
+       2018
+      ],
+      "era5_100m_mean": 14.39,
+      "merra2_100m_mean": 13.92,
+      "era5_over_merra2_pct": 3.4,
+      "hourly_correlation": 0.962
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "MERRA-2 gives a mean of 14.1 m/s at 150 m (shear exponent 0.090 fitted from 10 m and 50 m, extrapolated), 3.6 m/s above the 10.5 m/s base case. Weibull k fits at 2.96 (sim 2.2). Capacity factor per turbine 76% with the capex model's power curve and 10% losses. Cross-check: ERA5 100 m is +3.4% against MERRA-2 over 4 common years (hourly correlation 0.96).",
+    "sim_change": "Use 14.1 m/s as this site's base wind. Reanalyses smooth gusts and wakes, and the 50 m to 150 m extrapolation adds uncertainty, so treat it as slightly optimistic.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)",
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C8",
+    "title": "Wind gaps: share of load served at 2x overbuild + 12 h storage",
+    "assumption": "Synthetic Weibull + AR(1, rho 0.985) wind, served fraction from the capex model",
+    "observed": {
+     "served_real": 0.969,
+     "served_synthetic_same_mean": 0.854,
+     "served_capex_base_case_synthetic": 0.779,
+     "difference": 0.116,
+     "min_overbuild_at_12h_storage": {
+      "served_90pct": 1.3,
+      "served_95pct": 1.5
+     },
+     "served_by_year_min": 0.941,
+     "served_by_year_max": 0.981,
+     "lull_below_5ms_real": {
+      "frac_below": 0.03993293183684643,
+      "n_runs": 581,
+      "longest_h": 44,
+      "p95_run_h": 16.0,
+      "mean_run_h": 6.025817555938038
+     },
+     "lull_below_5ms_synthetic": {
+      "frac_below": 0.08261415525114155,
+      "n_runs": 884,
+      "longest_h": 134,
+      "p95_run_h": 38.0,
+      "mean_run_h": 8.186651583710407
+     },
+     "lag1_autocorr_real": 0.985,
+     "lag1_autocorr_synthetic": 0.9852,
+     "served_grid": {
+      "over1.5_store0h": 0.87,
+      "over1.5_store12h": 0.952,
+      "over1.5_store24h": 0.97,
+      "over1.5_store48h": 0.983,
+      "over2.0_store0h": 0.892,
+      "over2.0_store12h": 0.969,
+      "over2.0_store24h": 0.984,
+      "over2.0_store48h": 0.991,
+      "over3.0_store0h": 0.915,
+      "over3.0_store12h": 0.982,
+      "over3.0_store24h": 0.992,
+      "over3.0_store48h": 0.995
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "With real hourly wind the 2x/12 h design serves 96.9% of the load, against 85.4% for the synthetic series at the same mean (11.6 points more). Years vary from 94.1% to 98.1%. Longest stretch below 5 m/s is 44 h in reality versus 134 h synthetic. The capex base case (synthetic, 10.5 m/s mean) serves 77.9%. A 90% served fraction needs only 1.3x overbuild with 12 h storage here.",
+    "sim_change": "Replace the synthetic wind in capex_model.py with this site's ERA5 series; use the served_grid to re-pick overbuild and storage.",
+    "sources": [
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C9",
+    "title": "Sea state for pod swaps (72 h windows)",
+    "assumption": "An annual service/recovery campaign is possible (capex model: $8M/yr)",
+    "observed": {
+     "hours": 28509,
+     "period": "2021-10 to 2024-12",
+     "Hs_p50": 4.22,
+     "Hs_p95": 6.88,
+     "Hs_p99": 8.36,
+     "Hs_max": 11.82,
+     "service_limit_Hs": 2.5,
+     "windows": {
+      "Hs<2.0": {
+       "annual": 0.0,
+       "best_month": 1,
+       "best_month_frac": 0.0,
+       "best_3mo_frac": 0.0
+      },
+      "Hs<2.5": {
+       "annual": 0.002,
+       "best_month": 12,
+       "best_month_frac": 0.011,
+       "best_3mo_frac": 0.007
+      },
+      "Hs<3.0": {
+       "annual": 0.011,
+       "best_month": 1,
+       "best_month_frac": 0.04,
+       "best_3mo_frac": 0.02
+      },
+      "Hs<3.5": {
+       "annual": 0.03,
+       "best_month": 12,
+       "best_month_frac": 0.083,
+       "best_3mo_frac": 0.041
+      }
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "Median significant wave height is 4.2 m and the 99th percentile 8.4 m (max 11.8 m). A 72 h window with Hs under 2.5 m is open 0.2% of hours over the year and 0.7% in the best three months (month 12).",
+    "sim_change": "Budget weather standby days in the campaign cost, size the work for Hs 3 m or more with a DP vessel, or shorten the swap procedure below 72 h.",
+    "sources": [
+     "Open-Meteo marine archive, wave model reanalysis from April 2021 (marine-api.open-meteo.com)"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C10",
+    "title": "Cost per GPU-hour with real wind",
+    "assumption": "Base case: $5.66 per sold GPU-hour (synthetic wind, 2x overbuild, 12 h storage), terrestrial $2.61",
+    "observed": {
+     "base_per_hr": 5.66,
+     "base_served": 0.786,
+     "real_wind_same_config_per_hr": 4.59,
+     "real_wind_served": 0.969,
+     "cost_change_pct": -18.9,
+     "best_config": {
+      "overbuild": 1.25,
+      "storage_h": 4,
+      "served": 0.894,
+      "per_hr": 4.4,
+      "capex_M": 827.0
+     },
+     "best_vs_base_pct": -22.3,
+     "terrestrial_per_hr": 2.61,
+     "best_premium_vs_terrestrial_pct": 68.0
+    },
+    "verdict": "contradicted",
+    "finding": "With this site's real wind the base design costs $4.59 per sold GPU-hour (-19% against the capex base case $5.66) because it serves 97% instead of 79%. Re-optimised (1.25x overbuild, 4 h storage) it reaches $4.40, -22% against base and +68% against terrestrial ($2.61). Everything else in the capex model is unchanged.",
+    "sim_change": "Feed each site's wind series into capex_model.py and re-pick overbuild and storage; wind capex and storage are the levers that move.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)"
+    ],
+    "direction": "better"
+   }
+  ],
+  "pacific": [
+   {
+    "id": "C1",
+    "title": "Sea temperature at pod depth",
+    "assumption": "4.0 C at 150 m, slider range 0.0-10.0 C",
+    "observed": {
+     "n_profiles": 661,
+     "years": "2019-2024",
+     "p5": 1.788,
+     "p25": 3.156,
+     "p50": 4.436,
+     "p75": 5.402,
+     "p95": 6.745,
+     "mean": 4.289,
+     "frac_inside_slider_range": 0.998,
+     "salinity_median": 34.083
+    },
+    "verdict": "supported",
+    "finding": "Observed median 4.4 C, warmer than the 4.0 C default; 100% of profiles fall inside the slider range. Colder sea helps heat rejection, so a warm default is the conservative side.",
+    "sim_change": "Set the default sea temperature to about 4.4 C for this site; keep the 0-10 C range.",
+    "sources": [
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C2",
+    "title": "Current speed at pod depth",
+    "assumption": "0.2 m/s typical, slider 0.01-0.5 m/s",
+    "observed": {
+     "n_samples": 984,
+     "months": [
+      "2023-01",
+      "2023-04",
+      "2023-07",
+      "2023-10"
+     ],
+     "p5": 0.052,
+     "p25": 0.199,
+     "p50": 0.308,
+     "p75": 0.413,
+     "p95": 0.614,
+     "p99": 0.815,
+     "max": 1.035,
+     "frac_below_slack": 0.048,
+     "slack_threshold": 0.05,
+     "frac_inside_slider_range": 0.864,
+     "direction_steadiness": 0.489,
+     "mean_u": 0.146,
+     "mean_v": 0.055
+    },
+    "verdict": "marginal",
+    "finding": "Median 0.31 m/s (P5 0.05, P95 0.61); 4.8% of 3-hourly samples are below 0.05 m/s; direction steadiness 0.49 (1 = one-way flow).",
+    "sim_change": "Add this site's P5/P50/P95 as presets on the current slider; model slack water as a first-class case.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C3",
+    "title": "Seawater volumetric heat capacity",
+    "assumption": "rho*cp = 4.1 MJ/m3/K; nu = 1.56e-6 m2/s in the Reynolds readout",
+    "observed": {
+     "T_C": 4.44,
+     "S_psu": 34.08,
+     "rho": 1027.7,
+     "cp": 3987.9,
+     "rho_cp_MJ": 4.0984,
+     "nu_m2s": 1.6011042697422284e-06,
+     "k_W_mK": 0.5772,
+     "Pr": 11.37,
+     "rho_cp_error": 0.0004,
+     "nu_error": 0.0257
+    },
+    "verdict": "supported",
+    "finding": "TEOS-10 gives rho*cp = 4.098 MJ/m3/K at 4.4 C (0.0% from the sim). Kinematic viscosity is 1.60e-6 m2/s, so the Reynolds readout is 3% high.",
+    "sim_change": "Change the Reynolds readout to use nu = 1.62e-6 m2/s at 4 C (minor).",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C4",
+    "title": "Hull heat-transfer coefficient U",
+    "assumption": "U = 200 + 1200 v  W/m2K (200 still, 800 at 0.5 m/s)",
+    "observed": {
+     "v_p10": {
+      "v": 0.1,
+      "U_physics": 248.0,
+      "U_sim": 321.0,
+      "h_out": 418.0,
+      "ratio_sim_over_physics": 1.29
+     },
+     "v_p50": {
+      "v": 0.308,
+      "U_physics": 285.0,
+      "U_sim": 570.0,
+      "h_out": 534.0,
+      "ratio_sim_over_physics": 2.0
+     },
+     "v_p90": {
+      "v": 0.538,
+      "U_physics": 337.0,
+      "U_sim": 846.0,
+      "h_out": 748.0,
+      "ratio_sim_over_physics": 2.51
+     },
+     "U_physics_still": 244.0,
+     "U_physics_at_0_5": 329.0,
+     "U_sim_still": 200,
+     "U_sim_at_0_5": 800,
+     "series_resistance_cap_W_m2K": 612.0,
+     "coolant_C": 27.0,
+     "sea_C": 4.44,
+     "wall_T_still_C": 18.0
+    },
+    "verdict": "contradicted",
+    "finding": "Still-water U matches (244 vs 200) because turbulent natural convection is strong at a 25 K wall-sea difference, but the sim's slope is too steep: at 0.5 m/s physics gives 329 against 800, since the glycol side, steel wall and fouling cap U at about 612 W/m2K and the outside film is no longer the only resistance. Worst sim/physics ratio across P10-P90 currents is 2.5x.",
+    "sim_change": "Replace the sim's U with a curve fitted to the physics: roughly 244 W/m2K still rising to 329 at 0.5 m/s. Inner-side h and fouling are my [A] values and the slope is sensitive to them.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C5",
+    "title": "Can the hull reject 0.96 MW?",
+    "assumption": "Hull area x1.5 (U = 200 + 1200 v) rejects the full pod load at a normal 22 to 32 C loop",
+    "observed": {
+     "sea_C": 4.44,
+     "fin_efficiency_assumed": 0.85,
+     "supply_temp_needed": {
+      "p5": {
+       "v": 0.052,
+       "supply_C": 22.4
+      },
+      "p50": {
+       "v": 0.308,
+       "supply_C": 19.6
+      },
+      "p95": {
+       "v": 0.614,
+       "supply_C": 16.0
+      }
+     },
+     "supply_temp_needed_with_sim_U": {
+      "p5": 20.0,
+      "p50": 9.6,
+      "p95": 6.5
+     },
+     "limit_no_throttle_C": 27.0,
+     "vendor_spec_max_C": 32.0,
+     "capacity_MW_p50_at_22_32C_loop": 1.09,
+     "frac_time_22_32C_loop_enough": 0.876,
+     "bare_hull_area_factor_needed_p99_at_22_32C": 1.46
+    },
+    "verdict": "supported",
+    "finding": "To reject 0.96 MW with the x1.5 hull (fins at 85% efficiency) at this site's weakest-current case (P5, 0.052 m/s), the coolant supply must be 22.4 C; at the median current 19.6 C. The sim's own U would say 20.0 C. Full-power operation without throttling needs a supply of 27 C or less (chip model Tj = coolant + 38 K, throttle at 70 C); the vendor maximum is 32 C.",
+    "sim_change": "If the needed supply is above 27 C, add area (target bare-hull factor of about 1.5 before fin efficiency) or plan on throttling during weak-current periods.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C6",
+    "title": "Bulk warming of the water passing a pod",
+    "assumption": "0.03 K for one pod at 0.2 m/s; 10 pods in the same stream add linearly",
+    "observed": {
+     "one_pod_K": {
+      "p50": 0.02,
+      "p95": 0.118,
+      "p99": 0.305
+     },
+     "ten_pods_in_line_K": {
+      "p50": 0.198,
+      "p95": 1.18,
+      "p99": 3.049
+     },
+     "limit_K": 0.5,
+     "frac_time_ten_pods_over_limit": 0.123,
+     "v_floor_ms": 0.02
+    },
+    "verdict": "marginal",
+    "finding": "Ten in-line pods warm the passing water by 0.20 K at the median current and 1.18 K at P95; it exceeds the 0.5 K illustrative limit 12.3% of the time. Values below 0.02 m/s are floored there, where the real plume turns buoyant and rises instead of diluting.",
+    "sim_change": "Stagger pods across the stream (cross-flow spacing) so no pod sits in another's wake, and agree a real ecological limit with the ecology team.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C7",
+    "title": "Hub-height wind resource",
+    "assumption": "mean 10.5 m/s (range 9.0-12.0), Weibull k = 2.2",
+    "observed": {
+     "hours": 87672,
+     "years": "2015-2024",
+     "mean_hub_ms": 13.67,
+     "shear_exponent_fitted": 0.09,
+     "weibull_k": 2.92,
+     "weibull_scale": 15.3,
+     "capacity_factor_per_turbine": 0.748,
+     "year_mean_min": 12.91,
+     "year_mean_max": 14.98,
+     "frac_hours_below_cut_in": 0.015,
+     "frac_hours_above_rated": 0.725,
+     "frac_hours_above_cut_out": 0.0139,
+     "cross_check": {
+      "overlap_years": [
+       2015,
+       2016,
+       2017,
+       2018,
+       2019,
+       2020,
+       2021
+      ],
+      "era5_100m_mean": 13.5,
+      "merra2_100m_mean": 13.21,
+      "era5_over_merra2_pct": 2.2,
+      "hourly_correlation": 0.96
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "MERRA-2 gives a mean of 13.7 m/s at 150 m (shear exponent 0.090 fitted from 10 m and 50 m, extrapolated), 3.2 m/s above the 10.5 m/s base case. Weibull k fits at 2.92 (sim 2.2). Capacity factor per turbine 75% with the capex model's power curve and 10% losses. Cross-check: ERA5 100 m is +2.2% against MERRA-2 over 7 common years (hourly correlation 0.96).",
+    "sim_change": "Use 13.7 m/s as this site's base wind. Reanalyses smooth gusts and wakes, and the 50 m to 150 m extrapolation adds uncertainty, so treat it as slightly optimistic.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)",
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C8",
+    "title": "Wind gaps: share of load served at 2x overbuild + 12 h storage",
+    "assumption": "Synthetic Weibull + AR(1, rho 0.985) wind, served fraction from the capex model",
+    "observed": {
+     "served_real": 0.963,
+     "served_synthetic_same_mean": 0.852,
+     "served_capex_base_case_synthetic": 0.779,
+     "difference": 0.111,
+     "min_overbuild_at_12h_storage": {
+      "served_90pct": 1.3,
+      "served_95pct": 1.7
+     },
+     "served_by_year_min": 0.947,
+     "served_by_year_max": 0.983,
+     "lull_below_5ms_real": {
+      "frac_below": 0.046308969796514284,
+      "n_runs": 590,
+      "longest_h": 66,
+      "p95_run_h": 20.549999999999955,
+      "mean_run_h": 6.88135593220339
+     },
+     "lull_below_5ms_synthetic": {
+      "frac_below": 0.08868721461187215,
+      "n_runs": 954,
+      "longest_h": 134,
+      "p95_run_h": 37.0,
+      "mean_run_h": 8.143605870020965
+     },
+     "lag1_autocorr_real": 0.9865,
+     "lag1_autocorr_synthetic": 0.9852,
+     "served_grid": {
+      "over1.5_store0h": 0.863,
+      "over1.5_store12h": 0.943,
+      "over1.5_store24h": 0.964,
+      "over1.5_store48h": 0.979,
+      "over2.0_store0h": 0.886,
+      "over2.0_store12h": 0.963,
+      "over2.0_store24h": 0.979,
+      "over2.0_store48h": 0.989,
+      "over3.0_store0h": 0.911,
+      "over3.0_store12h": 0.976,
+      "over3.0_store24h": 0.988,
+      "over3.0_store48h": 0.994
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "With real hourly wind the 2x/12 h design serves 96.3% of the load, against 85.2% for the synthetic series at the same mean (11.1 points more). Years vary from 94.7% to 98.3%. Longest stretch below 5 m/s is 66 h in reality versus 134 h synthetic. The capex base case (synthetic, 10.5 m/s mean) serves 77.9%. A 90% served fraction needs only 1.3x overbuild with 12 h storage here.",
+    "sim_change": "Replace the synthetic wind in capex_model.py with this site's ERA5 series; use the served_grid to re-pick overbuild and storage.",
+    "sources": [
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C9",
+    "title": "Sea state for pod swaps (72 h windows)",
+    "assumption": "An annual service/recovery campaign is possible (capex model: $8M/yr)",
+    "observed": {
+     "hours": 28509,
+     "period": "2021-10 to 2024-12",
+     "Hs_p50": 3.94,
+     "Hs_p95": 7.0,
+     "Hs_p99": 8.7,
+     "Hs_max": 12.46,
+     "service_limit_Hs": 2.5,
+     "windows": {
+      "Hs<2.0": {
+       "annual": 0.0,
+       "best_month": 1,
+       "best_month_frac": 0.0,
+       "best_3mo_frac": 0.0
+      },
+      "Hs<2.5": {
+       "annual": 0.009,
+       "best_month": 3,
+       "best_month_frac": 0.036,
+       "best_3mo_frac": 0.017
+      },
+      "Hs<3.0": {
+       "annual": 0.029,
+       "best_month": 3,
+       "best_month_frac": 0.097,
+       "best_3mo_frac": 0.039
+      },
+      "Hs<3.5": {
+       "annual": 0.061,
+       "best_month": 3,
+       "best_month_frac": 0.178,
+       "best_3mo_frac": 0.09
+      }
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "Median significant wave height is 3.9 m and the 99th percentile 8.7 m (max 12.5 m). A 72 h window with Hs under 2.5 m is open 0.9% of hours over the year and 1.7% in the best three months (month 3).",
+    "sim_change": "Budget weather standby days in the campaign cost, size the work for Hs 3 m or more with a DP vessel, or shorten the swap procedure below 72 h.",
+    "sources": [
+     "Open-Meteo marine archive, wave model reanalysis from April 2021 (marine-api.open-meteo.com)"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C10",
+    "title": "Cost per GPU-hour with real wind",
+    "assumption": "Base case: $5.66 per sold GPU-hour (synthetic wind, 2x overbuild, 12 h storage), terrestrial $2.61",
+    "observed": {
+     "base_per_hr": 5.66,
+     "base_served": 0.786,
+     "real_wind_same_config_per_hr": 4.62,
+     "real_wind_served": 0.963,
+     "cost_change_pct": -18.4,
+     "best_config": {
+      "overbuild": 1.25,
+      "storage_h": 4,
+      "served": 0.884,
+      "per_hr": 4.44,
+      "capex_M": 827.0
+     },
+     "best_vs_base_pct": -21.5,
+     "terrestrial_per_hr": 2.61,
+     "best_premium_vs_terrestrial_pct": 70.0
+    },
+    "verdict": "contradicted",
+    "finding": "With this site's real wind the base design costs $4.62 per sold GPU-hour (-18% against the capex base case $5.66) because it serves 96% instead of 79%. Re-optimised (1.25x overbuild, 4 h storage) it reaches $4.44, -21% against base and +70% against terrestrial ($2.61). Everything else in the capex model is unchanged.",
+    "sim_change": "Feed each site's wind series into capex_model.py and re-pick overbuild and storage; wind capex and storage are the levers that move.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)"
+    ],
+    "direction": "better"
+   }
+  ],
+  "chile": [
+   {
+    "id": "C1",
+    "title": "Sea temperature at pod depth",
+    "assumption": "4.0 C at 150 m, slider range 0.0-10.0 C",
+    "observed": {
+     "n_profiles": 127,
+     "years": "2019-2024",
+     "p5": 5.05,
+     "p25": 5.361,
+     "p50": 5.595,
+     "p75": 5.767,
+     "p95": 6.19,
+     "mean": 5.588,
+     "frac_inside_slider_range": 1.0,
+     "salinity_median": 34.118
+    },
+    "verdict": "supported",
+    "finding": "Observed median 5.6 C, warmer than the 4.0 C default; 100% of profiles fall inside the slider range. Colder sea helps heat rejection, so a warm default is the conservative side.",
+    "sim_change": "Set the default sea temperature to about 5.6 C for this site; keep the 0-10 C range.",
+    "sources": [
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C2",
+    "title": "Current speed at pod depth",
+    "assumption": "0.2 m/s typical, slider 0.01-0.5 m/s",
+    "observed": {
+     "n_samples": 984,
+     "months": [
+      "2023-01",
+      "2023-04",
+      "2023-07",
+      "2023-10"
+     ],
+     "p5": 0.017,
+     "p25": 0.043,
+     "p50": 0.065,
+     "p75": 0.09,
+     "p95": 0.121,
+     "p99": 0.135,
+     "max": 0.196,
+     "frac_below_slack": 0.332,
+     "slack_threshold": 0.05,
+     "frac_inside_slider_range": 0.983,
+     "direction_steadiness": 0.376,
+     "mean_u": -0.024,
+     "mean_v": 0.007
+    },
+    "verdict": "contradicted",
+    "finding": "Median 0.07 m/s (P5 0.02, P95 0.12); 33.2% of 3-hourly samples are below 0.05 m/s; direction steadiness 0.38 (1 = one-way flow).",
+    "sim_change": "Add this site's P5/P50/P95 as presets on the current slider; model slack water as a first-class case.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C3",
+    "title": "Seawater volumetric heat capacity",
+    "assumption": "rho*cp = 4.1 MJ/m3/K; nu = 1.56e-6 m2/s in the Reynolds readout",
+    "observed": {
+     "T_C": 5.59,
+     "S_psu": 34.12,
+     "rho": 1027.6,
+     "cp": 3988.2,
+     "rho_cp_MJ": 4.0983,
+     "nu_m2s": 1.5449538448069752e-06,
+     "k_W_mK": 0.5792,
+     "Pr": 10.93,
+     "rho_cp_error": 0.0004,
+     "nu_error": 0.0097
+    },
+    "verdict": "supported",
+    "finding": "TEOS-10 gives rho*cp = 4.098 MJ/m3/K at 5.6 C (0.0% from the sim). Kinematic viscosity is 1.54e-6 m2/s, so the Reynolds readout is 1% high.",
+    "sim_change": "Change the Reynolds readout to use nu = 1.62e-6 m2/s at 4 C (minor).",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C4",
+    "title": "Hull heat-transfer coefficient U",
+    "assumption": "U = 200 + 1200 v  W/m2K (200 still, 800 at 0.5 m/s)",
+    "observed": {
+     "v_p10": {
+      "v": 0.026,
+      "U_physics": 245.0,
+      "U_sim": 231.0,
+      "h_out": 408.0,
+      "ratio_sim_over_physics": 0.94
+     },
+     "v_p50": {
+      "v": 0.065,
+      "U_physics": 246.0,
+      "U_sim": 278.0,
+      "h_out": 412.0,
+      "ratio_sim_over_physics": 1.13
+     },
+     "v_p90": {
+      "v": 0.11,
+      "U_physics": 250.0,
+      "U_sim": 331.0,
+      "h_out": 422.0,
+      "ratio_sim_over_physics": 1.33
+     },
+     "U_physics_still": 245.0,
+     "U_physics_at_0_5": 331.0,
+     "U_sim_still": 200,
+     "U_sim_at_0_5": 800,
+     "series_resistance_cap_W_m2K": 612.0,
+     "coolant_C": 27.0,
+     "sea_C": 5.59,
+     "wall_T_still_C": 18.4
+    },
+    "verdict": "marginal",
+    "finding": "Still-water U matches (245 vs 200) because turbulent natural convection is strong at a 25 K wall-sea difference, but the sim's slope is too steep: at 0.5 m/s physics gives 331 against 800, since the glycol side, steel wall and fouling cap U at about 612 W/m2K and the outside film is no longer the only resistance. Worst sim/physics ratio across P10-P90 currents is 1.3x.",
+    "sim_change": "Replace the sim's U with a curve fitted to the physics: roughly 245 W/m2K still rising to 331 at 0.5 m/s. Inner-side h and fouling are my [A] values and the slope is sensitive to them.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C5",
+    "title": "Can the hull reject 0.96 MW?",
+    "assumption": "Hull area x1.5 (U = 200 + 1200 v) rejects the full pod load at a normal 22 to 32 C loop",
+    "observed": {
+     "sea_C": 5.59,
+     "fin_efficiency_assumed": 0.85,
+     "supply_temp_needed": {
+      "p5": {
+       "v": 0.017,
+       "supply_C": 23.4
+      },
+      "p50": {
+       "v": 0.065,
+       "supply_C": 23.3
+      },
+      "p95": {
+       "v": 0.121,
+       "supply_C": 22.9
+      }
+     },
+     "supply_temp_needed_with_sim_U": {
+      "p5": 24.9,
+      "p50": 20.1,
+      "p95": 16.5
+     },
+     "limit_no_throttle_C": 27.0,
+     "vendor_spec_max_C": 32.0,
+     "capacity_MW_p50_at_22_32C_loop": 0.89,
+     "frac_time_22_32C_loop_enough": 0.0,
+     "bare_hull_area_factor_needed_p99_at_22_32C": 1.54
+    },
+    "verdict": "supported",
+    "finding": "To reject 0.96 MW with the x1.5 hull (fins at 85% efficiency) at this site's weakest-current case (P5, 0.017 m/s), the coolant supply must be 23.4 C; at the median current 23.3 C. The sim's own U would say 24.9 C. Full-power operation without throttling needs a supply of 27 C or less (chip model Tj = coolant + 38 K, throttle at 70 C); the vendor maximum is 32 C.",
+    "sim_change": "If the needed supply is above 27 C, add area (target bare-hull factor of about 1.5 before fin efficiency) or plan on throttling during weak-current periods.",
+    "sources": [
+     "Churchill-Bernstein / Churchill-Chu correlations; Sharqawy et al. 2010 seawater properties; TEOS-10 (gsw)",
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations",
+     "Argo float profiles, Ifremer ERDDAP ArgoFloats (erddap.ifremer.fr), QC flag 1"
+    ],
+    "direction": "neutral"
+   },
+   {
+    "id": "C6",
+    "title": "Bulk warming of the water passing a pod",
+    "assumption": "0.03 K for one pod at 0.2 m/s; 10 pods in the same stream add linearly",
+    "observed": {
+     "one_pod_K": {
+      "p50": 0.094,
+      "p95": 0.305,
+      "p99": 0.305
+     },
+     "ten_pods_in_line_K": {
+      "p50": 0.938,
+      "p95": 3.049,
+      "p99": 3.049
+     },
+     "limit_K": 0.5,
+     "frac_time_ten_pods_over_limit": 0.9553,
+     "v_floor_ms": 0.02
+    },
+    "verdict": "contradicted",
+    "finding": "Ten in-line pods warm the passing water by 0.94 K at the median current and 3.05 K at P95; it exceeds the 0.5 K illustrative limit 95.5% of the time. Values below 0.02 m/s are floored there, where the real plume turns buoyant and rises instead of diluting.",
+    "sim_change": "Stagger pods across the stream (cross-flow spacing) so no pod sits in another's wake, and agree a real ecological limit with the ecology team.",
+    "sources": [
+     "HYCOM GLBy0.08 expt 93.0 analysis, THREDDS NCSS (tds.hycom.org); a model, not observations"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C7",
+    "title": "Hub-height wind resource",
+    "assumption": "mean 10.5 m/s (range 9.0-12.0), Weibull k = 2.2",
+    "observed": {
+     "hours": 87672,
+     "years": "2015-2024",
+     "mean_hub_ms": 13.7,
+     "shear_exponent_fitted": 0.089,
+     "weibull_k": 2.87,
+     "weibull_scale": 15.35,
+     "capacity_factor_per_turbine": 0.739,
+     "year_mean_min": 12.89,
+     "year_mean_max": 14.37,
+     "frac_hours_below_cut_in": 0.014,
+     "frac_hours_above_rated": 0.716,
+     "frac_hours_above_cut_out": 0.0136,
+     "cross_check": {
+      "overlap_years": [
+       2015,
+       2016,
+       2017,
+       2018
+      ],
+      "era5_100m_mean": 13.29,
+      "merra2_100m_mean": 13.07,
+      "era5_over_merra2_pct": 1.6,
+      "hourly_correlation": 0.965
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "MERRA-2 gives a mean of 13.7 m/s at 150 m (shear exponent 0.089 fitted from 10 m and 50 m, extrapolated), 3.2 m/s above the 10.5 m/s base case. Weibull k fits at 2.87 (sim 2.2). Capacity factor per turbine 74% with the capex model's power curve and 10% losses. Cross-check: ERA5 100 m is +1.6% against MERRA-2 over 4 common years (hourly correlation 0.96).",
+    "sim_change": "Use 13.7 m/s as this site's base wind. Reanalyses smooth gusts and wakes, and the 50 m to 150 m extrapolation adds uncertainty, so treat it as slightly optimistic.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)",
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C8",
+    "title": "Wind gaps: share of load served at 2x overbuild + 12 h storage",
+    "assumption": "Synthetic Weibull + AR(1, rho 0.985) wind, served fraction from the capex model",
+    "observed": {
+     "served_real": 0.944,
+     "served_synthetic_same_mean": 0.852,
+     "served_capex_base_case_synthetic": 0.779,
+     "difference": 0.092,
+     "min_overbuild_at_12h_storage": {
+      "served_90pct": 1.3,
+      "served_95pct": 2.3
+     },
+     "served_by_year_min": 0.911,
+     "served_by_year_max": 0.963,
+     "lull_below_5ms_real": {
+      "frac_below": 0.04900082124281412,
+      "n_runs": 494,
+      "longest_h": 107,
+      "p95_run_h": 23.349999999999966,
+      "mean_run_h": 8.696356275303645
+     },
+     "lull_below_5ms_synthetic": {
+      "frac_below": 0.08823059360730594,
+      "n_runs": 949,
+      "longest_h": 134,
+      "p95_run_h": 37.0,
+      "mean_run_h": 8.144362486828241
+     },
+     "lag1_autocorr_real": 0.9895,
+     "lag1_autocorr_synthetic": 0.9852,
+     "served_grid": {
+      "over1.5_store0h": 0.852,
+      "over1.5_store12h": 0.923,
+      "over1.5_store24h": 0.945,
+      "over1.5_store48h": 0.966,
+      "over2.0_store0h": 0.877,
+      "over2.0_store12h": 0.944,
+      "over2.0_store24h": 0.965,
+      "over2.0_store48h": 0.982,
+      "over3.0_store0h": 0.904,
+      "over3.0_store12h": 0.964,
+      "over3.0_store24h": 0.98,
+      "over3.0_store48h": 0.991
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "With real hourly wind the 2x/12 h design serves 94.4% of the load, against 85.2% for the synthetic series at the same mean (9.2 points more). Years vary from 91.1% to 96.3%. Longest stretch below 5 m/s is 107 h in reality versus 134 h synthetic. The capex base case (synthetic, 10.5 m/s mean) serves 77.9%. A 90% served fraction needs only 1.3x overbuild with 12 h storage here.",
+    "sim_change": "Replace the synthetic wind in capex_model.py with this site's ERA5 series; use the served_grid to re-pick overbuild and storage.",
+    "sources": [
+     "ECMWF ERA5 via Open-Meteo archive API (archive-api.open-meteo.com)"
+    ],
+    "direction": "better"
+   },
+   {
+    "id": "C9",
+    "title": "Sea state for pod swaps (72 h windows)",
+    "assumption": "An annual service/recovery campaign is possible (capex model: $8M/yr)",
+    "observed": {
+     "hours": 28509,
+     "period": "2021-10 to 2024-12",
+     "Hs_p50": 4.22,
+     "Hs_p95": 6.98,
+     "Hs_p99": 8.08,
+     "Hs_max": 10.66,
+     "service_limit_Hs": 2.5,
+     "windows": {
+      "Hs<2.0": {
+       "annual": 0.0,
+       "best_month": 1,
+       "best_month_frac": 0.0,
+       "best_3mo_frac": 0.0
+      },
+      "Hs<2.5": {
+       "annual": 0.006,
+       "best_month": 7,
+       "best_month_frac": 0.035,
+       "best_3mo_frac": 0.014
+      },
+      "Hs<3.0": {
+       "annual": 0.026,
+       "best_month": 6,
+       "best_month_frac": 0.074,
+       "best_3mo_frac": 0.05
+      },
+      "Hs<3.5": {
+       "annual": 0.055,
+       "best_month": 6,
+       "best_month_frac": 0.128,
+       "best_3mo_frac": 0.096
+      }
+     }
+    },
+    "verdict": "contradicted",
+    "finding": "Median significant wave height is 4.2 m and the 99th percentile 8.1 m (max 10.7 m). A 72 h window with Hs under 2.5 m is open 0.6% of hours over the year and 1.4% in the best three months (month 7).",
+    "sim_change": "Budget weather standby days in the campaign cost, size the work for Hs 3 m or more with a DP vessel, or shorten the swap procedure below 72 h.",
+    "sources": [
+     "Open-Meteo marine archive, wave model reanalysis from April 2021 (marine-api.open-meteo.com)"
+    ],
+    "direction": "worse"
+   },
+   {
+    "id": "C10",
+    "title": "Cost per GPU-hour with real wind",
+    "assumption": "Base case: $5.66 per sold GPU-hour (synthetic wind, 2x overbuild, 12 h storage), terrestrial $2.61",
+    "observed": {
+     "base_per_hr": 5.66,
+     "base_served": 0.786,
+     "real_wind_same_config_per_hr": 4.71,
+     "real_wind_served": 0.944,
+     "cost_change_pct": -16.8,
+     "best_config": {
+      "overbuild": 1.25,
+      "storage_h": 4,
+      "served": 0.869,
+      "per_hr": 4.52,
+      "capex_M": 827.0
+     },
+     "best_vs_base_pct": -20.1,
+     "terrestrial_per_hr": 2.61,
+     "best_premium_vs_terrestrial_pct": 73.0
+    },
+    "verdict": "contradicted",
+    "finding": "With this site's real wind the base design costs $4.71 per sold GPU-hour (-17% against the capex base case $5.66) because it serves 94% instead of 79%. Re-optimised (1.25x overbuild, 4 h storage) it reaches $4.52, -20% against base and +73% against terrestrial ($2.61). Everything else in the capex model is unchanged.",
+    "sim_change": "Feed each site's wind series into capex_model.py and re-pick overbuild and storage; wind capex and storage are the levers that move.",
+    "sources": [
+     "NASA POWER hourly WS10M and WS50M, MERRA-2 reanalysis (power.larc.nasa.gov)"
+    ],
+    "direction": "better"
+   }
+  ]
+ }
+}

@@ -1,0 +1,7 @@
+requests>=2.31
+numpy>=1.26
+pandas>=2.0
+gsw>=3.6
+fastapi>=0.110
+uvicorn>=0.27
+pytest>=8.0

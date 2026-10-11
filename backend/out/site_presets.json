@@ -1,0 +1,30 @@
+{
+ "drake": {
+  "name": "Drake Passage",
+  "sea_T_C": 1.222,
+  "current_p5": 0.05,
+  "current_p50": 0.158,
+  "current_p95": 0.506
+ },
+ "kerguelen": {
+  "name": "Kerguelen Plateau, south",
+  "sea_T_C": 1.032,
+  "current_p5": 0.01,
+  "current_p50": 0.046,
+  "current_p95": 0.137
+ },
+ "pacific": {
+  "name": "SE Pacific ACC",
+  "sea_T_C": 4.436,
+  "current_p5": 0.052,
+  "current_p50": 0.308,
+  "current_p95": 0.614
+ },
+ "chile": {
+  "name": "Offshore southern Chile",
+  "sea_T_C": 5.595,
+  "current_p5": 0.017,
+  "current_p50": 0.065,
+  "current_p95": 0.121
+ }
+}
