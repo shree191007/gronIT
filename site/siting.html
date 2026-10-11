@@ -1,0 +1,766 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Antarctic Neocloud Siting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: controls | polar chart | results. Chart leads on tablets and phones. Chart-room palette: abyssal ink, glacier paper, one heat-orange for nodes. */
+:root{
+  --bg:#E7EEF2; --panel:#F5F8FA; --ink:#0B2233; --ink2:#4A6373; --line:#C3D2DB;
+  --ocean:#D5E4EC; --ice:#FAFCFD; --coast:#6F8A9B; --grid:rgba(11,34,51,.18);
+  --node:#D9500B; --node-ink:#FFFFFF; --mpa:#13795B; --good:#13795B; --warn:#8F5F00; --bad:#B3213F;
+  --r0:#D5E4EC; --r1:#93B2D6; --r2:#7B4DA6; --r3:#3B0F5E;
+  --f-disp:'Barlow Condensed','Arial Narrow',sans-serif;
+  --f-body:'Barlow',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#06121A; --panel:#0C1E2A; --ink:#DCEAF1; --ink2:#90AAB9; --line:#203849;
+    --ocean:#0A2030; --ice:#C6D8E2; --coast:#5F7F90; --grid:rgba(220,234,241,.2);
+    --node:#FF8A3D; --node-ink:#1A0C02; --mpa:#4FD1A5; --good:#4FD1A5; --warn:#E3B341; --bad:#FF6B88;
+    --r0:#0A2030; --r1:#22507C; --r2:#7E41A2; --r3:#F28EDB;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#06121A; --panel:#0C1E2A; --ink:#DCEAF1; --ink2:#90AAB9; --line:#203849;
+  --ocean:#0A2030; --ice:#C6D8E2; --coast:#5F7F90; --grid:rgba(220,234,241,.2);
+  --node:#FF8A3D; --node-ink:#1A0C02; --mpa:#4FD1A5; --good:#4FD1A5; --warn:#E3B341; --bad:#FF6B88;
+  --r0:#0A2030; --r1:#22507C; --r2:#7E41A2; --r3:#F28EDB;
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);padding-inline:16px;padding-block:18px}
+*{box-sizing:border-box}
+.app{max-width:1500px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--node);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-end}
+.titleblock{min-width:0;max-width:62ch}
+.eyebrow{margin:0 0 2px;font:500 12px/1.2 var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+h1{margin:0;font:700 40px/1 var(--f-disp);letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--ink2)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{background:var(--node);color:var(--node-ink);border:1px solid var(--node);border-radius:3px;padding:8px 14px;font:600 14px/1 var(--f-body);cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink2)}
+.btn.small{padding:6px 10px;font-size:13px}
+
+.grid{display:grid;grid-template-columns:292px minmax(0,1fr) 340px;gap:16px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px;min-width:0}
+.panel h2{margin:0 0 10px;font:600 14px/1.2 var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.panel h2:not(:first-child){margin-top:18px}
+
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+.ctl .lab{display:flex;justify-content:space-between;gap:8px}
+.ctl output{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--node);margin:2px 0}
+input[type=number]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:5px 7px;font:500 13px var(--f-mono)}
+.check{display:flex;gap:8px;align-items:flex-start;margin:4px 0 12px}
+.check input{margin-top:3px;accent-color:var(--node)}
+.seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 10px}
+.seg button,.layers button{background:transparent;border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:500 13px var(--f-body);cursor:pointer;color:var(--ink2)}
+.seg button[aria-pressed=true],.layers button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--ink2);font:600 13px var(--f-disp);letter-spacing:.1em;text-transform:uppercase}
+.assume{display:grid;grid-template-columns:1fr 84px;gap:6px 10px;align-items:center;margin-top:8px}
+.hint{color:var(--ink2);font-size:12px;margin:6px 0 0}
+
+.mapwrap{display:flex;flex-direction:column;gap:10px;min-width:0}
+.layers{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.layers .cap{font:600 12px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-right:4px}
+.stage{position:relative;background:var(--ocean);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+canvas{display:block;width:min(100%,84vh);height:auto;aspect-ratio:1/1;margin-inline:auto;touch-action:manipulation;cursor:crosshair}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:12px;color:var(--ink2)}
+.ramp{display:inline-flex;align-items:center;gap:6px}
+.ramp i{display:block;width:96px;height:8px;border-radius:2px;background:linear-gradient(90deg,var(--r0),var(--r1),var(--r2),var(--r3));border:1px solid var(--line)}
+.key{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:11px;height:11px}
+.sw.node{background:var(--node);border-radius:50%}
+.sw.stn{background:var(--ink)}
+.sw.mpa{border:2px solid var(--mpa)}
+.sw.mpa.p{border-style:dashed}
+.sw.fade{background:var(--ocean);border:1px solid var(--line);opacity:.6}
+.hover{font:500 12px var(--f-mono);color:var(--ink2);min-height:1.4em;font-variant-numeric:tabular-nums}
+
+.probe{position:absolute;left:10px;bottom:10px;width:min(280px,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.probe[hidden]{display:none!important}
+.probe h3{margin:0 0 4px;font:600 16px var(--f-disp);letter-spacing:.04em}
+.chip{display:inline-block;font:600 11px var(--f-disp);letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid var(--line);border-radius:2px;color:var(--ink2);margin-left:6px}
+.chip.bad{color:var(--bad);border-color:var(--bad)}
+.chip.good{color:var(--good);border-color:var(--good)}
+.mini{display:grid;grid-template-columns:96px 1fr 34px;gap:3px 8px;align-items:center;margin:6px 0;font-size:12px}
+.mini .tr{height:6px;background:var(--line);border-radius:1px;overflow:hidden}
+.mini .tr b{display:block;height:100%;background:var(--r2)}
+.mini span:last-child{font:500 11px var(--f-mono);text-align:right;color:var(--ink2)}
+.probe .btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.probe .x{position:absolute;top:6px;right:8px;background:none;border:0;cursor:pointer;color:var(--ink2);font-size:18px;line-height:1}
+
+.idx{display:flex;align-items:baseline;gap:8px}
+.idx .big{font:700 56px/1 var(--f-disp);font-variant-numeric:tabular-nums}
+.idx .of{font:500 16px var(--f-disp);color:var(--ink2);letter-spacing:.06em}
+.idxlab{font:600 12px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.vs{margin:6px 0 0;font-size:13px}
+.vs b{font-weight:600}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.stat{border-top:2px solid var(--line);padding-top:6px;min-width:0}
+.stat .v{font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.stat .l{font:600 11px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.notice{border:1px solid var(--warn);color:var(--warn);border-radius:3px;padding:8px 10px;font-size:13px;margin:0 0 12px}
+.notice[hidden]{display:none!important}
+.sinks{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.sinks li{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center;font-size:12px}
+.sinks .tr{height:6px;background:var(--line);overflow:hidden}
+.sinks .tr b{display:block;height:100%;background:var(--node)}
+.rows{display:flex;flex-direction:column;border-top:1px solid var(--line);max-height:300px;overflow-y:auto}
+.row{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:7px 2px;cursor:pointer}
+.row:hover,.row[aria-pressed=true]{background:var(--bg)}
+.row .n{font:600 13px var(--f-mono);color:var(--node)}
+.row .t{min-width:0;font-size:12px}
+.row .t small{display:block;color:var(--ink2);font-size:11px;overflow-wrap:anywhere}
+.row .s{font:500 12px var(--f-mono)}
+.foot{color:var(--ink2);font-size:12px;max-width:110ch}
+
+@media (max-width:1180px){
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .mapwrap{grid-column:1/-1;order:-1}
+}
+@media (max-width:720px){
+  h1{font-size:32px}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .probe{position:static;width:auto;margin:0 10px 10px;box-shadow:none}
+  .stage{display:flex;flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<div class="app">
+  <header class="top">
+    <div class="titleblock">
+      <p class="eyebrow">Southern Ocean · south of 50°S · schematic model</p>
+      <h1>Antarctic Neocloud</h1>
+      <p class="lede">Place subsea compute nodes where they disturb the least ecology. Every node sends its waste heat ashore to a station, so nothing is rejected into the water.</p>
+    </div>
+    <div class="actions">
+      <button id="optimise" class="btn" type="button">Optimise placement</button>
+      <button id="clear" class="btn ghost" type="button">Clear manual nodes</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <aside class="panel" id="controls" aria-label="Siting controls"></aside>
+
+    <section class="mapwrap" aria-label="Polar map of candidate sites">
+      <div class="layers" id="layers" role="group" aria-label="Map layer"><span class="cap">Layer</span></div>
+      <div class="stage">
+        <canvas id="map" role="img" aria-label="South polar map showing ecological sensitivity, protected areas, research stations and placed compute nodes. Click to inspect a site."></canvas>
+        <div class="probe" id="probe" hidden></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="hover" id="hover" aria-live="off">Hover the map to read a site. Click to inspect it and place a node by hand.</div>
+    </section>
+
+    <aside class="panel" id="results" aria-label="Placement results"></aside>
+  </main>
+
+  <p class="foot">Sensitivity layers are hand-placed from published distributions of krill, colonies, foraging areas and shelf habitat. Coastlines, protected-area boundaries and station heat demand are simplified. Treat the output as a siting method for the pitch, then load CCAMLR and SCAR data before quoting figures. Cost inputs are editable placeholders.</p>
+</div>
+<script>
+/* ---------- Schematic Southern Ocean data (hand-placed, see footer) ---------- */
+const KM_PER_DEG = 111.195;
+const R_KM = 40 * KM_PER_DEG; // map radius, pole to 50°S
+
+// Continent outline [lon, lat], traversed eastward from the Ross Sea. Ice shelves are treated as land.
+const COAST = [
+[-180,-78.2],[-170,-77.9],[-160,-78.0],[-155,-78.0],[-150,-76.8],[-140,-75.3],[-130,-74.6],[-120,-74.3],[-110,-74.8],[-102,-74.5],
+[-96,-73.6],[-90,-72.8],[-85,-73.2],[-80,-73.3],[-75,-72.6],[-72,-71.3],[-70,-69.5],[-68,-67.2],[-65.5,-65.4],[-62.5,-63.8],
+[-57.5,-63.2],[-58,-64.3],[-60.3,-65.5],[-61.5,-67.5],[-62,-69.5],[-61,-71.5],[-60,-73.5],[-58,-75.2],[-50,-76.5],[-45,-77.8],
+[-38,-77.8],[-36,-76.5],[-30,-75.8],[-26,-75.5],[-20,-73],[-12,-71.5],[-8,-70.7],[0,-70.2],[10,-70.1],[20,-70],
+[30,-69.8],[38,-69],[45,-67.5],[50,-66.8],[60,-67.5],[68,-68.5],[71,-69.8],[75,-69.3],[78,-68.7],[87,-66.6],
+[95,-66.5],[100,-66.3],[110,-66],[115,-66.3],[120,-66.5],[128,-66.5],[135,-66.2],[140,-66.7],[145,-67],[150,-68.5],
+[158,-69.5],[162,-70.5],[167,-71],[170,-71.4],[168,-72.5],[166,-74],[164,-75.5],[166,-77.2],[170,-77.8],[180,-78.2]
+];
+
+const ISLANDS = [
+  {n:'South Georgia',lon:-36.5,lat:-54.3,r:70},{n:'South Orkney',lon:-45.5,lat:-60.6,r:35},
+  {n:'South Shetland',lon:-59,lat:-62.0,r:50},{n:'Balleny',lon:163,lat:-66.9,r:25},
+  {n:'Peter I',lon:-90.6,lat:-68.8,r:20},{n:'Bouvet',lon:3.4,lat:-54.4,r:20},
+  {n:'Heard',lon:73.5,lat:-53.1,r:25},{n:'Macquarie',lon:158.9,lat:-54.6,r:20}
+];
+
+// Research stations. heat = illustrative winter heating demand in MW thermal.
+const STATIONS = [
+  {n:'McMurdo / Scott',lat:-77.85,lon:166.7,heat:8.0},
+  {n:'Mario Zucchelli',lat:-74.69,lon:164.1,heat:1.5},
+  {n:'Dumont d’Urville',lat:-66.66,lon:140.0,heat:1.5},
+  {n:'Casey',lat:-66.28,lon:110.5,heat:2.0},
+  {n:'Davis',lat:-68.58,lon:78.0,heat:1.8},
+  {n:'Zhongshan',lat:-69.37,lon:76.4,heat:1.5},
+  {n:'Mawson',lat:-67.6,lon:62.9,heat:1.5},
+  {n:'Syowa',lat:-69.0,lon:39.6,heat:1.5},
+  {n:'Neumayer',lat:-70.67,lon:-8.3,heat:1.2},
+  {n:'Halley',lat:-75.58,lon:-26.2,heat:0.8},
+  {n:'Rothera',lat:-67.57,lon:-68.1,heat:1.6},
+  {n:'Palmer',lat:-64.77,lon:-64.05,heat:0.9},
+  {n:'Esperanza',lat:-63.4,lon:-57.0,heat:1.0},
+  {n:'King Edward Pt',lat:-54.28,lon:-36.5,heat:0.5},
+  {n:'Signy',lat:-60.7,lon:-45.6,heat:0.4}
+];
+
+// Sensitivity hotspots: lat, lon, radius km, weight 0..1
+const KRILL = [
+  {n:'Bransfield and Gerlache',lat:-62.8,lon:-59,r:380,w:1.0},
+  {n:'Scotia Sea',lat:-60,lon:-48,r:450,w:0.9},
+  {n:'South Georgia shelf',lat:-54.8,lon:-37,r:350,w:0.9},
+  {n:'Prydz Bay',lat:-67.5,lon:74,r:300,w:0.7},
+  {n:'Ross Sea shelf',lat:-74,lon:-178,r:500,w:0.6},
+  {n:'Wilkes shelf',lat:-65,lon:115,r:300,w:0.5}
+];
+const WILD = [
+  {n:'Cape Crozier',lat:-77.5,lon:169.3,r:220,w:1.0},{n:'Cape Washington',lat:-74.7,lon:165.4,r:200,w:1.0},
+  {n:'Cape Adare',lat:-71.3,lon:170.2,r:220,w:0.9},{n:'Pointe Géologie',lat:-66.7,lon:140,r:180,w:0.7},
+  {n:'Atka Bay',lat:-70.6,lon:-8,r:200,w:0.8},{n:'Brunt colonies',lat:-75.5,lon:-26,r:200,w:0.7},
+  {n:'Snow Hill',lat:-64.5,lon:-57,r:220,w:0.8},{n:'West Peninsula whales',lat:-65,lon:-66,r:300,w:0.8},
+  {n:'Amanda Bay',lat:-69.3,lon:76.8,r:200,w:0.7},{n:'South Georgia colonies',lat:-54.3,lon:-36.5,r:300,w:1.0},
+  {n:'South Orkney colonies',lat:-60.6,lon:-45,r:220,w:0.8},{n:'Mawson coast',lat:-67.5,lon:60,r:200,w:0.6},
+  {n:'Lutzow-Holm coast',lat:-69.3,lon:39.7,r:180,w:0.6},{n:'Ross Sea whales',lat:-75,lon:-175,r:400,w:0.6}
+];
+
+// Protected areas, schematic outlines. kind: 'a' adopted, 'p' proposed.
+const MPAS = [
+  {n:'Ross Sea region',kind:'a',poly:[[150,-62],[210,-62],[210,-80],[150,-80]]},
+  {n:'South Orkney shelf',kind:'a',poly:[[-48,-62],[-41,-62],[-41,-60.2],[-48,-60.2]]},
+  {n:'Weddell Sea',kind:'p',poly:[[-62,-64],[-12,-64],[-12,-78],[-62,-78]]},
+  {n:'East Antarctic',kind:'p',poly:[[10,-62],[110,-62],[110,-70],[10,-70]]},
+  {n:'West Peninsula',kind:'p',poly:[[-75,-62],[-58,-62],[-58,-70],[-75,-70]]}
+];
+
+const HEAT_RECOVERY = 0.9; // share of IT power delivered as usable heat
+/* ---------- Siting model (pure, no DOM) ---------- */
+const D2R = Math.PI / 180;
+function hav(lat1, lon1, lat2, lon2) {
+  const a = Math.sin((lat2 - lat1) * D2R / 2) ** 2 +
+    Math.cos(lat1 * D2R) * Math.cos(lat2 * D2R) * Math.sin((lon2 - lon1) * D2R / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+function project(lon, lat) { const r = (lat + 90) * KM_PER_DEG, a = lon * D2R; return [r * Math.sin(a), r * Math.cos(a)]; }
+function unproject(X, Y) { const r = Math.hypot(X, Y); return { lat: -90 + r / KM_PER_DEG, lon: Math.atan2(X, Y) / D2R }; }
+function densify(poly, stepDeg) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])) / stepDeg));
+    for (let k = 0; k < n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+  }
+  return out;
+}
+function inPoly(x, y, p) {
+  let c = false;
+  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    if ((p[i][1] > y) !== (p[j][1] > y) && x < (p[j][0] - p[i][0]) * (y - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c;
+  }
+  return c;
+}
+const softOr = (arr) => 1 - arr.reduce((a, v) => a * (1 - v), 1);
+const hot = (list, lat, lon) => softOr(list.map(h => h.w * Math.exp(-((hav(lat, lon, h.lat, h.lon) / h.r) ** 2))));
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+const COAST_KM = densify(COAST, 2).map(p => project(p[0], p[1]));
+const MPA_KM = MPAS.map(m => ({ ...m, km: densify(m.poly, 2).map(p => project(p[0], p[1])) }));
+const STN_KM = STATIONS.map(s => project(s.lon, s.lat));
+
+function buildGrid(N) {
+  const cell = 2 * R_KM / N, n = N * N, S = STATIONS.length;
+  // coastline sample points every ~25 km
+  const cp = [];
+  for (let i = 0; i < COAST_KM.length; i++) {
+    const a = COAST_KM[i], b = COAST_KM[(i + 1) % COAST_KM.length];
+    const k = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 25));
+    for (let t = 0; t < k; t++) cp.push([a[0] + (b[0] - a[0]) * t / k, a[1] + (b[1] - a[1]) * t / k]);
+  }
+  const isl = ISLANDS.map(o => ({ ...o, xy: project(o.lon, o.lat) }));
+  const g = {
+    N, cell, n, S,
+    X: new Float32Array(n), Y: new Float32Array(n), lat: new Float32Array(n), lon: new Float32Array(n),
+    ocean: new Uint8Array(n), dc: new Float32Array(n),
+    krill: new Float32Array(n), wild: new Float32Array(n), bent: new Float32Array(n), haz: new Float32Array(n),
+    mpa: new Uint8Array(n), dStn: new Float32Array(n * S), dNear: new Float32Array(n), nearIdx: new Int16Array(n)
+  };
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const id = j * N + i, X = -R_KM + (i + 0.5) * cell, Y = R_KM - (j + 0.5) * cell;
+    g.X[id] = X; g.Y[id] = Y;
+    const r = Math.hypot(X, Y);
+    if (r > R_KM) continue;
+    const u = unproject(X, Y); g.lat[id] = u.lat; g.lon[id] = u.lon;
+    if (inPoly(X, Y, COAST_KM)) continue;
+    let land = false, dc = 1e9;
+    for (const o of isl) {
+      const d = Math.hypot(X - o.xy[0], Y - o.xy[1]);
+      if (d < o.r) { land = true; break; }
+      dc = Math.min(dc, d - o.r);
+    }
+    if (land) continue;
+    for (let k = 0; k < cp.length; k++) {
+      const dx = X - cp[k][0], dy = Y - cp[k][1], d = dx * dx + dy * dy;
+      if (d < dc * dc) dc = Math.sqrt(d);
+    }
+    g.ocean[id] = 1; g.dc[id] = dc;
+    const lat = u.lat, lon = u.lon;
+    g.krill[id] = hot(KRILL, lat, lon);
+    g.wild[id] = softOr([hot(WILD, lat, lon), 0.3 * Math.exp(-dc / 150)]);
+    g.bent[id] = 0.2 + 0.7 / (1 + Math.exp((dc - 220) / 90));
+    const ice = clamp01((-lat - 56) / 16), scour = 1 / (1 + Math.exp((dc - 120) / 50));
+    g.haz[id] = 0.55 * ice + 0.45 * scour;
+    let m = 0;
+    for (const mp of MPA_KM) if (inPoly(X, Y, mp.km)) { m = mp.kind === 'a' ? 1 : (m || 2); if (m === 1) break; }
+    g.mpa[id] = m;
+    let best = 1e9, bi = 0;
+    for (let s = 0; s < S; s++) {
+      const d = hav(lat, lon, STATIONS[s].lat, STATIONS[s].lon);
+      g.dStn[id * S + s] = d;
+      if (d < best) { best = d; bi = s; }
+    }
+    g.dNear[id] = best; g.nearIdx[id] = bi;
+  }
+  return g;
+}
+
+function weightsOf(P) {
+  let sum = P.wK + P.wW + P.wB;
+  return sum > 0 ? { k: P.wK / sum, w: P.wW / sum, b: P.wB / sum } : { k: 1 / 3, w: 1 / 3, b: 1 / 3 };
+}
+const ecoAt = (g, i, P) => { const w = weightsOf(P); return w.k * g.krill[i] + w.w * g.wild[i] + w.b * g.bent[i]; };
+const excluded = (g, i, P) => P.mpaMode === 'all' ? g.mpa[i] > 0 : P.mpaMode === 'adopted' ? g.mpa[i] === 1 : false;
+function stationCap(P) { return STATIONS.map(s => Math.floor(s.heat / (P.pod * HEAT_RECOVERY) + 1e-9)); }
+
+// Nearest station that can still take heat (or nearest overall when heat reuse is off).
+function assign(g, i, P, used, cap) {
+  let best = -1, bd = 1e9;
+  for (let s = 0; s < g.S; s++) {
+    const d = g.dStn[i * g.S + s];
+    if (P.heat && (used[s] >= cap[s] || d > P.reach)) continue;
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best < 0 ? null : { s: best, d: bd };
+}
+function nodeCost(g, i, P, d) {
+  const w = weightsOf(P);
+  const eco = P.wK * g.krill[i] + P.wW * g.wild[i] + P.wB * g.bent[i];
+  void w;
+  return eco + P.wH * g.haz[i] + P.wC * Math.min(1.5, d / 600);
+}
+function spacingOk(g, i, chosen, P) {
+  for (const c of chosen) {
+    const dx = g.X[i] - c.X, dy = g.Y[i] - c.Y;
+    if (dx * dx + dy * dy < (P.spacing * 0.85) ** 2 && hav(g.lat[i], g.lon[i], c.lat, c.lon) < P.spacing) return false;
+  }
+  return true;
+}
+function makeNode(g, i, st, manual) {
+  return { cell: i, X: g.X[i], Y: g.Y[i], lat: g.lat[i], lon: g.lon[i], s: st ? st.s : -1, d: st ? st.d : g.dNear[i], manual: !!manual };
+}
+
+function optimise(g, P, locked) {
+  const cap = stationCap(P), used = new Array(g.S).fill(0);
+  const chosen = locked.map(n => ({ ...n }));
+  for (const n of chosen) if (n.s >= 0) used[n.s]++;
+  const cand = [];
+  for (let i = 0; i < g.n; i++) if (g.ocean[i] && !excluded(g, i, P) && (!P.heat || g.dNear[i] <= P.reach)) cand.push(i);
+  const target = Math.max(0, P.n - chosen.length);
+  for (let step = 0; step < target; step++) {
+    let bi = -1, bc = 1e9, bs = null;
+    for (const i of cand) {
+      const st = assign(g, i, P, used, cap);
+      if (!st) continue;
+      const c = nodeCost(g, i, P, st.d);
+      if (c >= bc || !spacingOk(g, i, chosen, P)) continue;
+      bc = c; bi = i; bs = st;
+    }
+    if (bi < 0) break;
+    chosen.push(makeNode(g, bi, bs, false)); used[bs.s]++;
+  }
+  // local refinement: let each free node try a better cell nearby once capacity is freed
+  for (let pass = 0; pass < 2; pass++) {
+    let moved = false;
+    for (let k = 0; k < chosen.length; k++) {
+      const n = chosen[k]; if (n.manual) continue;
+      if (n.s >= 0) used[n.s]--;
+      const others = chosen.filter((_, q) => q !== k);
+      const cur = nodeCost(g, n.cell, P, n.d);
+      let bi = n.cell, bc = cur, bs = n.s >= 0 ? { s: n.s, d: n.d } : null;
+      for (const i of cand) {
+        const dx = g.X[i] - n.X, dy = g.Y[i] - n.Y;
+        if (dx * dx + dy * dy > 500 * 500) continue;
+        const st = assign(g, i, P, used, cap);
+        if (!st) continue;
+        const c = nodeCost(g, i, P, st.d);
+        if (c < bc - 1e-6 && spacingOk(g, i, others, P)) { bc = c; bi = i; bs = st; }
+      }
+      if (bi !== n.cell) { chosen[k] = makeNode(g, bi, bs, false); moved = true; }
+      if (bs) used[bs.s]++;
+    }
+    if (!moved) break;
+  }
+  return chosen;
+}
+
+function evaluate(g, nodes, P, C) {
+  const wts = weightsOf(P);
+  const cap = stationCap(P), used = new Array(g.S).fill(0);
+  let eco = 0, cable = 0, rejected = 0, heat = 0;
+  const stationsUsed = new Set();
+  const detail = nodes.map(n => {
+    const i = n.cell;
+    const e = wts.k * g.krill[i] + wts.w * g.wild[i] + wts.b * g.bent[i];
+    eco += e; cable += n.d;
+    if (n.s >= 0) { used[n.s]++; stationsUsed.add(n.s); }
+    if (P.heat && n.s >= 0) heat += P.pod * HEAT_RECOVERY; else rejected += P.pod;
+    const parts = [
+      ['Krill', P.wK * g.krill[i]], ['Wildlife', P.wW * g.wild[i]], ['Seabed', P.wB * g.bent[i]],
+      ['Ice and scour', P.wH * g.haz[i]], ['Cable', P.wC * Math.min(1.5, n.d / 600)]
+    ];
+    parts.sort((a, b) => b[1] - a[1]);
+    return { eco: e, main: parts[0][0] };
+  });
+  const it = nodes.length * P.pod;
+  const capex = it * C.pod + cable * C.cable + stationsUsed.size * C.landing;
+  return {
+    detail, it, heat, rejected, cable, capex, used, cap,
+    index: nodes.length ? 100 * eco / nodes.length : 0,
+    stationsUsed: stationsUsed.size
+  };
+}
+
+function baselineFor(g, P, C, locked) {
+  const B = { ...P, wK: 0, wW: 0, wB: 0, wH: 0, wC: 1 };
+  const nodes = optimise(g, B, locked);
+  return { nodes, ev: evaluate(g, nodes, P, C) };
+}
+/* ---------- UI ---------- */
+const $ = (s) => document.querySelector(s);
+const GRID_N = 200;
+const LAYERS = [
+  ['dist', 'Disturbance'], ['krill', 'Krill'], ['wild', 'Wildlife'], ['bent', 'Seabed'], ['haz', 'Ice and scour'], ['reach', 'Station reach']
+];
+const LAYER_NOTE = {
+  dist: 'Ecological disturbance from your weights', krill: 'Krill and food-web sensitivity', wild: 'Seabird, seal and whale sensitivity',
+  bent: 'Seabed habitat sensitivity (shelf is high)', haz: 'Sea-ice and iceberg-scour hazard', reach: 'Distance to nearest station'
+};
+const SLIDERS = {
+  prio: [
+    ['wK', 'Krill and food web', 0, 3, 0.1, 1.2, (v) => v.toFixed(1)],
+    ['wW', 'Seabirds, seals and whales', 0, 3, 0.1, 1.2, (v) => v.toFixed(1)],
+    ['wB', 'Seabed habitat', 0, 3, 0.1, 1, (v) => v.toFixed(1)],
+    ['wH', 'Ice and iceberg scour risk', 0, 3, 0.1, 0.6, (v) => v.toFixed(1)],
+    ['wC', 'Cable distance', 0, 3, 0.1, 0.5, (v) => v.toFixed(1)]
+  ],
+  net: [
+    ['n', 'Nodes requested', 2, 28, 1, 10, (v) => String(v)],
+    ['pod', 'Pod size', 0.25, 3, 0.25, 1, (v) => v.toFixed(2) + ' MW'],
+    ['spacing', 'Minimum spacing', 50, 600, 25, 150, (v) => v + ' km'],
+    ['reach', 'Heat-line reach to a station', 50, 600, 25, 300, (v) => v + ' km']
+  ]
+};
+let G = null, P = null, C = null, nodes = [], manual = [], ev = null, base = null;
+let layer = 'dist', mpaMode = 'adopted', card = null, sel = -1, geo = null;
+
+const fmtLL = (lat, lon) => `${Math.abs(lat).toFixed(1)}°S ${Math.abs(lon).toFixed(1)}°${lon < 0 ? 'W' : 'E'}`;
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function rgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+  return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+}
+
+function buildControls() {
+  const row = ([id, lab, mn, mx, st, v]) =>
+    `<div class="ctl"><label class="lab" for="${id}"><span>${lab}</span><output id="o_${id}" for="${id}"></output></label>` +
+    `<input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${v}"></div>`;
+  $('#controls').innerHTML =
+    `<h2>What to protect</h2>${SLIDERS.prio.map(row).join('')}` +
+    `<h2>Network</h2>${SLIDERS.net.map(row).join('')}` +
+    `<label class="check"><input type="checkbox" id="heat" checked><span>Send all waste heat to a station heat sink. Nodes must sit within reach of one.</span></label>` +
+    `<div class="idxlab">Protected areas</div>` +
+    `<div class="seg" id="mpaSeg" role="group" aria-label="Protected area handling">` +
+    `<button type="button" data-m="adopted" aria-pressed="true">Exclude adopted</button>` +
+    `<button type="button" data-m="all" aria-pressed="false">Exclude proposed too</button>` +
+    `<button type="button" data-m="off" aria-pressed="false">Ignore</button></div>` +
+    `<details><summary>Cost assumptions</summary><div class="assume">` +
+    `<label for="cPod">Pod, $M per MW</label><input type="number" id="cPod" value="10" min="0" step="0.5">` +
+    `<label for="cCable">Cable, $M per km</label><input type="number" id="cCable" value="0.6" min="0" step="0.1">` +
+    `<label for="cLand">Station tie-in, $M</label><input type="number" id="cLand" value="2" min="0" step="0.5"></div>` +
+    `<p class="hint">Placeholders. Replace with supplier quotes.</p></details>`;
+  $('#layers').insertAdjacentHTML('beforeend', LAYERS.map(([k, l]) => `<button type="button" data-l="${k}" aria-pressed="${k === layer}">${l}</button>`).join(''));
+}
+
+function readParams() {
+  const v = (id) => parseFloat($('#' + id).value);
+  for (const [id, , , , , , f] of [...SLIDERS.prio, ...SLIDERS.net]) $('#o_' + id).textContent = f(v(id));
+  P = { wK: v('wK'), wW: v('wW'), wB: v('wB'), wH: v('wH'), wC: v('wC'), n: v('n'), pod: v('pod'), spacing: v('spacing'), reach: v('reach'), heat: $('#heat').checked, mpaMode };
+  C = { pod: v('cPod') || 0, cable: v('cCable') || 0, landing: v('cLand') || 0 };
+}
+
+function run() {
+  readParams();
+  const cap = stationCap(P), used = new Array(G.S).fill(0);
+  const locked = manual.map((m) => {
+    const st = assign(G, m.cell, P, used, cap);
+    if (st) used[st.s]++;
+    return { ...m, s: st ? st.s : -1, d: st ? st.d : G.dNear[m.cell] };
+  });
+  nodes = optimise(G, P, locked);
+  ev = evaluate(G, nodes, P, C);
+  base = baselineFor(G, P, C, locked);
+  if (sel >= nodes.length) sel = -1;
+  if (sel < 0 && card && card.node >= 0) card = null;
+  renderResults(); renderCard(); draw();
+}
+
+function renderResults() {
+  const placed = nodes.length, idx = Math.round(ev.index), bIdx = Math.round(base.ev.index);
+  let vs = '';
+  if (placed) {
+    const cut = base.ev.index > 0 ? (base.ev.index - ev.index) / base.ev.index * 100 : 0;
+    const dKm = Math.round(ev.cable - base.ev.cable);
+    vs = `<p class="vs"><b class="${cut >= 0 ? 'good' : 'bad'}">${Math.abs(cut).toFixed(0)}% ${cut >= 0 ? 'less' : 'more'} disturbance</b> than siting purely for the shortest cable (index ${bIdx}). Total cable is ${dKm >= 0 ? '' : '−'}${Math.abs(dKm).toLocaleString()} km ${dKm >= 0 ? 'longer' : 'shorter'}.</p>`;
+  }
+  const notes = [];
+  if (placed < P.n) notes.push(`Only ${placed} of ${P.n} nodes fit. Station heat sinks, spacing, reach or excluded areas ran out of room. Try a smaller pod, longer reach or less spacing.`);
+  if (ev.rejected > 0) notes.push(`${ev.rejected.toFixed(1)} MW of heat would go into the ocean from nodes without a station heat sink.`);
+  const sinks = STATIONS.map((s, k) => ({ s, k, u: ev.used[k], c: ev.cap[k] })).filter((o) => o.u > 0).sort((a, b) => b.u - a.u);
+  $('#results').innerHTML =
+    `<div class="idxlab">Disturbance index</div>` +
+    `<div class="idx"><span class="big">${placed ? idx : '–'}</span><span class="of">/ 100</span></div>${vs}` +
+    `<div class="stats" style="margin-top:14px">` +
+    `<div class="stat"><div class="v">${placed}</div><div class="l">Nodes placed</div></div>` +
+    `<div class="stat"><div class="v">${ev.it.toFixed(1)} MW</div><div class="l">IT load</div></div>` +
+    `<div class="stat"><div class="v">${ev.heat.toFixed(1)} MW</div><div class="l">Heat to stations</div></div>` +
+    `<div class="stat"><div class="v">${Math.round(ev.cable).toLocaleString()} km</div><div class="l">Cable laid</div></div>` +
+    `<div class="stat"><div class="v">$${Math.round(ev.capex).toLocaleString()}M</div><div class="l">Capex, placeholder</div></div>` +
+    `<div class="stat"><div class="v">${ev.stationsUsed}</div><div class="l">Stations used</div></div></div>` +
+    `<p class="notice" ${notes.length ? '' : 'hidden'}>${notes.join(' ')}</p>` +
+    `<h2>Heat sinks in use</h2>` +
+    (sinks.length ? `<ul class="sinks">${sinks.map((o) => `<li><span>${o.s.n}</span><span><span class="tr" style="display:block"><b style="width:${Math.min(100, o.u / Math.max(1, o.c) * 100)}%"></b></span></span></li>`).join('')}</ul>` : `<p class="hint">No node is tied to a station yet.</p>`) +
+    `<h2>Nodes</h2><div class="rows" id="rows">${nodes.map((n, k) =>
+      `<button type="button" class="row" data-k="${k}" aria-pressed="${k === sel}"><span class="n">${k + 1}</span>` +
+      `<span class="t">${fmtLL(n.lat, n.lon)}<small>${n.s >= 0 ? STATIONS[n.s].n + ', ' + Math.round(n.d) + ' km' : 'no heat sink'} · mostly ${ev.detail[k].main.toLowerCase()}${n.manual ? ' · manual' : ''}</small></span>` +
+      `<span class="s">${Math.round(ev.detail[k].eco * 100)}</span></button>`).join('')}</div>`;
+  $('#legend').innerHTML =
+    `<span class="ramp"><span>Low</span><i></i><span>High</span> <span>${LAYER_NOTE[layer]}</span></span>` +
+    `<span class="key"><i class="sw node"></i>Node</span><span class="key"><i class="sw stn"></i>Station</span>` +
+    `<span class="key"><i class="sw mpa"></i>Protected, adopted</span><span class="key"><i class="sw mpa p"></i>Proposed</span>` +
+    `<span class="key"><i class="sw fade"></i>Not eligible</span>`;
+}
+
+function zoneOf(dc) { return dc < 120 ? 'Shelf' : dc < 350 ? 'Slope' : 'Deep basin'; }
+function renderCard() {
+  const el = $('#probe');
+  if (!card) { el.hidden = true; return; }
+  const i = card.cell;
+  if (!G.ocean[i]) {
+    el.innerHTML = `<button class="x" aria-label="Close">×</button><h3>${fmtLL(card.lat, card.lon)}</h3><p class="hint">Land or ice shelf. Nodes go in open water.</p>`;
+    el.hidden = false; return;
+  }
+  const bar = (l, v) => `<span>${l}</span><span class="tr"><b style="width:${Math.round(v * 100)}%"></b></span><span>${v.toFixed(2)}</span>`;
+  const near = STATIONS[G.nearIdx[i]], mp = G.mpa[i];
+  const mpaChip = mp === 1 ? '<span class="chip bad">Protected</span>' : mp === 2 ? '<span class="chip">Proposed MPA</span>' : '';
+  const n = card.node >= 0 ? nodes[card.node] : null;
+  let btns;
+  if (n) btns = n.manual ? `<button class="btn small ghost" data-act="remove">Remove node ${card.node + 1}</button>` : `<button class="btn small" data-act="lock">Lock node ${card.node + 1} here</button>`;
+  else btns = `<button class="btn small" data-act="place">Place node here</button>`;
+  el.innerHTML =
+    `<button class="x" aria-label="Close">×</button><h3>${n ? 'Node ' + (card.node + 1) + ' · ' : ''}${fmtLL(card.lat, card.lon)}<span class="chip">${zoneOf(G.dc[i])}</span>${mpaChip}</h3>` +
+    `<div class="mini">${bar('Krill', G.krill[i])}${bar('Wildlife', G.wild[i])}${bar('Seabed', G.bent[i])}${bar('Ice and scour', G.haz[i])}</div>` +
+    `<p class="hint" style="margin:0">Nearest station: ${near.n}, ${Math.round(G.dNear[i])} km${P.heat && G.dNear[i] > P.reach ? ' (beyond heat-line reach)' : ''}</p>` +
+    `<div class="btns">${btns}</div>`;
+  el.hidden = false;
+}
+
+/* ---- drawing ---- */
+function layerVal(i) {
+  switch (layer) {
+    case 'krill': return G.krill[i];
+    case 'wild': return G.wild[i];
+    case 'bent': return G.bent[i];
+    case 'haz': return G.haz[i];
+    case 'reach': return clamp01(G.dNear[i] / Math.max(P.reach * 2, 1));
+    default: return ecoAt(G, i, P);
+  }
+}
+const off = document.createElement('canvas');
+function paintField() {
+  off.width = off.height = G.N;
+  const c = off.getContext('2d'), img = c.createImageData(G.N, G.N);
+  const st = [css('--r0'), css('--r1'), css('--r2'), css('--r3')].map(rgb);
+  for (let i = 0; i < G.n; i++) {
+    if (!G.ocean[i]) continue;
+    const v = clamp01(layerVal(i)) * 3, k = Math.min(2, Math.floor(v)), f = v - k;
+    const a = st[k], b = st[k + 1], o = i * 4;
+    img.data[o] = a[0] + (b[0] - a[0]) * f; img.data[o + 1] = a[1] + (b[1] - a[1]) * f; img.data[o + 2] = a[2] + (b[2] - a[2]) * f;
+    const ok = !excluded(G, i, P) && (!P.heat || G.dNear[i] <= P.reach);
+    img.data[o + 3] = ok ? 255 : 105;
+  }
+  c.putImageData(img, 0, 0);
+}
+function halo(ctx, text, x, y, bg) {
+  ctx.lineWidth = 3; ctx.strokeStyle = bg; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y); ctx.fillText(text, x, y);
+}
+function draw() {
+  const cv = $('#map'), dpr = window.devicePixelRatio || 1, W = cv.getBoundingClientRect().width;
+  if (!W) return;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr);
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const pad = 34, cx = W / 2, cy = W / 2, s = (W / 2 - pad) / R_KM;
+  geo = { cx, cy, s, W };
+  const px = (X, Y) => [cx + X * s, cy - Y * s];
+  const ink = css('--ink'), ink2 = css('--ink2'), bg = css('--ocean'), mpaC = css('--mpa'), nodeC = css('--node'), nodeInk = css('--node-ink');
+  ctx.clearRect(0, 0, W, W);
+  ctx.beginPath(); ctx.arc(cx, cy, R_KM * s, 0, 7); ctx.fillStyle = bg; ctx.fill();
+  paintField();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R_KM * s, 0, 7); ctx.clip();
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(off, cx - R_KM * s, cy - R_KM * s, 2 * R_KM * s, 2 * R_KM * s);
+  ctx.restore();
+  // graticule
+  ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1; ctx.fillStyle = ink2; ctx.font = '500 10px ' + css('--f-mono');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let lon = 0; lon < 360; lon += 30) {
+    const a = project(lon, -50), b = [0, 0], p1 = px(a[0], a[1]), p0 = px(b[0], b[1]);
+    ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+    const l = project(lon, -50), q = px(l[0] * 1.045, l[1] * 1.045), w = lon > 180 ? lon - 360 : lon;
+    ctx.fillText(w === 0 || Math.abs(w) === 180 ? Math.abs(w) + '°' : Math.abs(w) + '°' + (w < 0 ? 'W' : 'E'), q[0], q[1]);
+  }
+  for (const lat of [-50, -60, -70, -80]) {
+    ctx.beginPath(); ctx.setLineDash(lat === -60 ? [6, 4] : []); ctx.arc(cx, cy, (lat + 90) * KM_PER_DEG * s, 0, 7);
+    ctx.lineWidth = lat === -60 ? 1.6 : 1; ctx.strokeStyle = lat === -60 ? ink2 : css('--grid'); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.textAlign = 'left'; ctx.font = '500 10px ' + css('--f-mono'); ctx.fillStyle = ink2;
+  halo(ctx, '60°S Antarctic Treaty limit', cx + 8, cy - 20 * KM_PER_DEG * s * 0 - (30 * KM_PER_DEG * s) - 8, bg);
+  halo(ctx, '70°S', cx + 6, cy - 20 * KM_PER_DEG * s - 6, bg);
+  // protected areas
+  for (const m of MPA_KM) {
+    ctx.beginPath(); m.km.forEach((p, k) => { const q = px(p[0], p[1]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+    ctx.save(); ctx.clip(); ctx.restore();
+    ctx.globalAlpha = 0.1; ctx.fillStyle = mpaC; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.setLineDash(m.kind === 'a' ? [] : [5, 4]); ctx.lineWidth = m.kind === 'a' ? 1.6 : 1.2; ctx.strokeStyle = mpaC; ctx.stroke(); ctx.setLineDash([]);
+  }
+  // land
+  ctx.beginPath(); COAST.forEach((p, k) => { const a = project(p[0], p[1]), q = px(a[0], a[1]); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+  ctx.fillStyle = css('--ice'); ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = css('--coast'); ctx.stroke();
+  for (const o of ISLANDS) { const a = project(o.lon, o.lat), q = px(a[0], a[1]); ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(2.5, o.r * s), 0, 7); ctx.fill(); ctx.stroke(); }
+  // protected area names
+  ctx.font = '600 10px ' + css('--f-disp'); ctx.textAlign = 'center'; ctx.fillStyle = mpaC;
+  for (const m of MPA_KM) {
+    const poly = m.poly, lon = (poly[0][0] + poly[1][0]) / 2, lat = poly[0][1] + 1.6, a = project(lon, lat), q = px(a[0], a[1]);
+    halo(ctx, m.n.toUpperCase() + (m.kind === 'p' ? ' (PROPOSED)' : ''), q[0], q[1], bg);
+  }
+  // stations
+  const usedSt = new Set(nodes.filter((n) => n.s >= 0).map((n) => n.s));
+  ctx.textAlign = 'left'; ctx.font = '500 10px ' + css('--f-body');
+  STATIONS.forEach((st, k) => {
+    const a = STN_KM[k], q = px(a[0], a[1]);
+    ctx.fillStyle = ink; ctx.fillRect(q[0] - 3, q[1] - 3, 6, 6);
+    if (W > 520 || usedSt.has(k)) { ctx.fillStyle = ink; halo(ctx, st.n, q[0] + 6, q[1] - 6, css('--ice')); }
+  });
+  // links and nodes
+  ctx.lineWidth = 1.6; ctx.strokeStyle = nodeC; ctx.globalAlpha = 0.8;
+  for (const n of nodes) if (n.s >= 0) { const a = px(n.X, n.Y), b = px(STN_KM[n.s][0], STN_KM[n.s][1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  nodes.forEach((n, k) => {
+    const q = px(n.X, n.Y);
+    if (n.manual) { ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = nodeC; ctx.beginPath(); ctx.arc(q[0], q[1], 12, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.beginPath(); ctx.arc(q[0], q[1], 8, 0, 7); ctx.fillStyle = nodeC; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css('--panel'); ctx.stroke();
+    ctx.fillStyle = nodeInk; ctx.font = '600 10px ' + css('--f-mono'); ctx.fillText(String(k + 1), q[0], q[1] + 0.5);
+    if (k === sel) { ctx.beginPath(); ctx.arc(q[0], q[1], 14, 0, 7); ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.stroke(); }
+  });
+  if (card && card.node < 0) {
+    const q = px(card.X, card.Y); ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.arc(q[0], q[1], 7, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(q[0] - 12, q[1]); ctx.lineTo(q[0] + 12, q[1]); ctx.moveTo(q[0], q[1] - 12); ctx.lineTo(q[0], q[1] + 12); ctx.stroke();
+  }
+}
+
+/* ---- interaction ---- */
+function toKm(e) {
+  const r = $('#map').getBoundingClientRect(), k = geo.W / r.width;
+  const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+  return { x, y, X: (x - geo.cx) / geo.s, Y: (geo.cy - y) / geo.s };
+}
+function cellAt(X, Y) {
+  const i = Math.floor((X + R_KM) / G.cell), j = Math.floor((R_KM - Y) / G.cell);
+  return i < 0 || j < 0 || i >= G.N || j >= G.N ? -1 : j * G.N + i;
+}
+function selectNode(k) {
+  sel = k;
+  const n = nodes[k];
+  card = { cell: n.cell, X: n.X, Y: n.Y, lat: n.lat, lon: n.lon, node: k };
+  renderResults(); renderCard(); draw();
+}
+function bind() {
+  const cv = $('#map');
+  cv.addEventListener('pointermove', (e) => {
+    if (!G || !geo) return;
+    const p = toKm(e), i = cellAt(p.X, p.Y), u = unproject(p.X, p.Y);
+    if (i < 0 || Math.hypot(p.X, p.Y) > R_KM) { $('#hover').textContent = 'Outside the map (north of 50°S).'; return; }
+    $('#hover').textContent = !G.ocean[i] ? `${fmtLL(u.lat, u.lon)} · land or ice shelf`
+      : `${fmtLL(u.lat, u.lon)} · ${zoneOf(G.dc[i])} · krill ${G.krill[i].toFixed(2)} · wildlife ${G.wild[i].toFixed(2)} · seabed ${G.bent[i].toFixed(2)} · hazard ${G.haz[i].toFixed(2)}`;
+  });
+  cv.addEventListener('click', (e) => {
+    if (!G) return;
+    const p = toKm(e);
+    let hit = -1, bd = 14;
+    nodes.forEach((n, k) => { const d = Math.hypot(geo.cx + n.X * geo.s - p.x, geo.cy - n.Y * geo.s - p.y); if (d < bd) { bd = d; hit = k; } });
+    if (hit >= 0) return selectNode(hit);
+    const i = cellAt(p.X, p.Y);
+    if (i < 0 || Math.hypot(p.X, p.Y) > R_KM) return;
+    const u = unproject(p.X, p.Y);
+    sel = -1; card = { cell: i, X: p.X, Y: p.Y, lat: u.lat, lon: u.lon, node: -1 };
+    renderResults(); renderCard(); draw();
+  });
+  $('#probe').addEventListener('click', (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.classList.contains('x')) { card = null; sel = -1; renderResults(); renderCard(); draw(); return; }
+    const a = t.dataset.act;
+    if (a === 'place') { manual.push({ cell: card.cell, X: card.X, Y: card.Y, lat: card.lat, lon: card.lon, manual: true }); card = null; run(); }
+    if (a === 'lock') { const n = nodes[card.node]; manual.push({ cell: n.cell, X: n.X, Y: n.Y, lat: n.lat, lon: n.lon, manual: true }); card = null; sel = -1; run(); }
+    if (a === 'remove') {
+      const n = nodes[card.node];
+      manual = manual.filter((m) => !(m.cell === n.cell && Math.abs(m.X - n.X) < 1e-3 && Math.abs(m.Y - n.Y) < 1e-3));
+      card = null; sel = -1; run();
+    }
+  });
+  $('#results').addEventListener('click', (e) => { const r = e.target.closest('.row'); if (r) selectNode(+r.dataset.k); });
+  $('#controls').addEventListener('input', () => { cancelAnimationFrame(bind.t); bind.t = requestAnimationFrame(run); });
+  $('#mpaSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    mpaMode = b.dataset.m;
+    for (const x of $('#mpaSeg').children) x.setAttribute('aria-pressed', String(x === b));
+    run();
+  });
+  $('#layers').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    layer = b.dataset.l;
+    for (const x of $('#layers').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+    renderResults(); draw();
+  });
+  $('#optimise').addEventListener('click', () => { card = null; sel = -1; run(); });
+  $('#clear').addEventListener('click', () => { manual = []; card = null; sel = -1; run(); });
+  new ResizeObserver(() => { if (G) draw(); }).observe(cv);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => G && draw());
+  new MutationObserver(() => G && draw()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+buildControls();
+readParams();
+bind();
+$('#hover').textContent = 'Building the map…';
+setTimeout(() => {
+  G = buildGrid(GRID_N);
+  $('#hover').textContent = 'Hover the map to read a site. Click to inspect it and place a node by hand.';
+  run();
+}, 30);
+</script>
+
+</body></html>

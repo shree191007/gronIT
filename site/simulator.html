@@ -1,0 +1,962 @@
+<title>Neocloud Pod Flow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a1318; --panel:#0f1b22; --panel2:#132530; --line:#1f343e; --fg:#dbe7eb; --muted:#8aa4ae;
+  --heat:#ff8a3d; --data:#4fc3f7; --power:#f2c94c; --ok:#4fd1a1; --warn:#ffb347; --crit:#ff5f5f;
+  --sea-top:#0f3b4c; --sea-bot:#06141b;
+  --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:14px/1.45 var(--sans);padding-inline:16px;padding-block:20px 48px}
+*{box-sizing:border-box}
+.app{max-width:1280px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:4px}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.chip{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--ok);color:var(--ok);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.chip[data-s=warn]{color:var(--warn);border-color:var(--warn)}
+.chip[data-s=crit]{color:var(--crit);border-color:var(--crit)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.panel h2{font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.panel h2 span{letter-spacing:.02em;text-transform:none;font-family:var(--mono);font-size:11px}
+canvas{display:block;width:100%;height:auto;border-radius:6px;background:#0b2230}
+.controls{display:grid;gap:12px}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}
+.ctl label{color:var(--fg)}
+.ctl output{font:500 12px var(--mono);color:var(--muted)}
+.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--heat);margin:2px 0}
+.seg-wrap{display:grid;gap:5px}
+.seg-wrap>span{color:var(--fg)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button,.btn{font:500 12px var(--sans);color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer;flex:1 1 auto;min-width:0}
+.seg button[aria-pressed=true]{background:#1d3b4a;border-color:var(--data);color:#fff}
+.seg button:hover,.btn:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--data);outline-offset:2px}
+.btnrow{display:flex;gap:6px}
+.chain{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.step{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:8px;padding:10px;min-width:0}
+.step[data-s=warn]{border-left-color:var(--warn)}
+.step[data-s=crit]{border-left-color:var(--crit)}
+.step .k{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.step .v{font:500 20px/1.2 var(--mono);margin:4px 0 2px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.step .s{font-size:12px;color:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:0 12px}
+dt,dd{margin:0;padding:6px 0;border-bottom:1px solid var(--line)}
+dt{color:var(--muted)}
+dd{font:500 13px var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+dl>*:nth-last-child(-n+2){border-bottom:0}
+.ladder{display:grid;gap:10px}
+.rung{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;align-items:baseline}
+.rung .n{font-size:13px}
+.rung .n i{font-style:normal;color:var(--muted);font-size:11px}
+.rung .q{font:500 12px var(--mono);color:var(--data);font-variant-numeric:tabular-nums}
+.rung .bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.rung .bar b{display:block;height:100%;background:var(--data);border-radius:3px}
+.tick{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted);margin-top:4px}
+.insight{margin:12px 0 0;color:var(--fg);padding-top:10px;border-top:1px solid var(--line)}
+.notes{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:6px;font-size:13px}
+.notes b{color:var(--fg);font-weight:500}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:-1px}
+@media (max-width:980px){
+  .app{display:flex;flex-direction:column}
+  .col{display:contents}
+  header{order:0}
+  #p-flow{order:1}#p-ctl{order:2}#p-hist{order:3}#p-chain{order:4}#p-cut{order:5}#p-col{order:6}#p-bw{order:7}#p-read{order:8}#p-notes{order:9}
+}
+@media (max-width:480px){.chain{grid-template-columns:1fr}}
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <h1>Pod flow simulator</h1>
+      <p>One 1 MW sealed compute pod at 150 m in the Southern Ocean: where the heat goes, and where the bits go. Reduced-order model, so read it for trends and failure behaviour rather than sizing.</p>
+    </div>
+    <div class="chip" id="status" role="status" data-s="ok">Nominal</div>
+  </header>
+
+  <div class="col">
+    <section class="panel" id="p-flow">
+      <h2>Heat flow around the pod <span id="flow-note">2D slice, current left to right</span></h2>
+      <canvas id="flow" style="aspect-ratio:256/112" aria-label="Simulated seawater temperature field around the pod cross-section"></canvas>
+    </section>
+    <section class="panel" id="p-hist">
+      <h2>Last 5 minutes <span>sim time</span></h2>
+      <canvas id="hist" style="aspect-ratio:3.4/1" aria-label="History of chip junction temperature, coolant temperature and compute delivered"></canvas>
+    </section>
+    <section class="panel" id="p-col">
+      <h2>Data and power from surface to seabed <span>not to scale</span></h2>
+      <canvas id="column" style="aspect-ratio:8/7" aria-label="Ocean column showing satellite link, platform, umbilical and pods"></canvas>
+      <div class="legend"><span><i style="background:var(--data);border-radius:50%"></i>data packets</span><span><i style="background:var(--power)"></i>power</span><span><i style="background:var(--heat);border-radius:50%"></i>heat</span></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel" id="p-ctl">
+      <h2>Controls</h2>
+      <div class="controls">
+        <div class="ctl"><label for="s-v">Sea current</label><output id="o-v"></output><input id="s-v" type="range" min="0.01" max="0.5" step="0.01" value="0.20"></div>
+        <div class="ctl"><label for="s-load">Compute load</label><output id="o-load"></output><input id="s-load" type="range" min="0" max="100" step="1" value="100"></div>
+        <div class="ctl"><label for="s-tsea">Sea temperature</label><output id="o-tsea"></output><input id="s-tsea" type="range" min="0" max="10" step="0.5" value="4"></div>
+        <div class="ctl"><label for="s-fin">Hull area factor (fins)</label><output id="o-fin"></output><input id="s-fin" type="range" min="1" max="3" step="0.1" value="1.5"></div>
+        <div class="seg-wrap"><span id="l-cool">Cooling state</span>
+          <div class="seg" data-key="cool" role="group" aria-labelledby="l-cool">
+            <button data-val="0" aria-pressed="true">Normal</button><button data-val="1" aria-pressed="false">One loop out</button><button data-val="2" aria-pressed="false">Rejection lost</button><button data-val="3" aria-pressed="false">Pumps out</button>
+          </div></div>
+        <div class="seg-wrap"><span id="l-wl">Workload</span>
+          <div class="seg" data-key="wl" role="group" aria-labelledby="l-wl">
+            <button data-val="0" aria-pressed="true">Inference</button><button data-val="1" aria-pressed="false">Training</button>
+          </div></div>
+        <div class="seg-wrap"><span id="l-sp">Time</span>
+          <div class="seg" data-key="speed" role="group" aria-labelledby="l-sp">
+            <button data-val="1" aria-pressed="false">×1</button><button data-val="10" aria-pressed="true">×10</button><button data-val="50" aria-pressed="false">×50</button>
+          </div></div>
+        <div class="btnrow"><button class="btn" id="b-pause">Pause</button><button class="btn" id="b-reset">Reset</button></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-chain">
+      <h2>Heat chain <span>chip to sea</span></h2>
+      <div class="chain">
+        <div class="step" id="c1"><div class="k">1 · Chip junction</div><div class="v" id="v1">–</div><div class="s" id="s1">–</div></div>
+        <div class="step" id="c2"><div class="k">2 · Coolant loop</div><div class="v" id="v2">–</div><div class="s" id="s2">–</div></div>
+        <div class="step" id="c3"><div class="k">3 · Hull exchanger</div><div class="v" id="v3">–</div><div class="s" id="s3">–</div></div>
+        <div class="step" id="c4"><div class="k">4 · Seawater</div><div class="v" id="v4">–</div><div class="s" id="s4">–</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-cut">
+      <h2>Inside the pod <span>cross-section</span></h2>
+      <canvas id="cut" style="aspect-ratio:1/1" aria-label="Cutaway of the pod showing racks, coolant jacket, hull fins, fibre and power"></canvas>
+    </section>
+
+    <section class="panel" id="p-bw">
+      <h2>Where the bandwidth goes <span>log scale</span></h2>
+      <div class="ladder" id="ladder"></div>
+      <div class="tick"><span>100 Mb/s</span><span>1 Gb/s</span><span>1 Tb/s</span><span>1 Pb/s</span></div>
+      <p class="insight" id="bw-insight"></p>
+    </section>
+
+    <section class="panel" id="p-read">
+      <h2>Run status</h2>
+      <dl id="dl"></dl>
+    </section>
+
+    <section class="panel" id="p-notes">
+      <h2>What this model is, and is not</h2>
+      <ul class="notes">
+        <li><b>Flow panel:</b> a 2D lattice-Boltzmann slice at Re ≈ <span id="n-re">156</span>. The real pod sees Re ≈ 4×10⁵ and a turbulent wake, so the vortex street here is a laminar stand-in.</li>
+        <li><b>Heat transfer:</b> hull U of 200 to 800 W/m²K, 8 MJ/K loop thermal mass, a 38 K chip-to-coolant rise at full power and the thermostat bypass are assumptions. Vendor specs for the actual racks govern.</li>
+        <li><b>Bandwidth:</b> the 130 TB/s rack NVLink figure is the NVL72 spec. The 3.2 Tb/s umbilical, 1 Gb/s satellite link and 4 KB per request are my assumptions.</li>
+        <li><b>Ocean column:</b> depth, spacing and the plume glow are schematic. The real bulk warming is a few hundredths of a kelvin.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+/* 2D lattice-Boltzmann flow (D2Q9, BGK) around a circular pod cross-section,
+   with a passive temperature field (semi-Lagrangian) and Boussinesq buoyancy. */
+function createSim(o) {
+  const nx = o.nx, ny = o.ny, N = nx * ny;
+  const R = o.R, pcx = o.cx, pcy = o.cy;
+  const tau = o.tau;
+  const cx = [0, 1, 0, -1, 0, 1, -1, -1, 1];
+  const cy = [0, 0, 1, 0, -1, 1, 1, -1, -1];
+  const w = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36];
+  const opp = [0, 3, 4, 1, 2, 7, 8, 5, 6];
+
+  let f = new Float32Array(9 * N);
+  let g = new Float32Array(9 * N);
+  const ux = new Float32Array(N), uy = new Float32Array(N);
+  let T = new Float32Array(N), T2 = new Float32Array(N);
+  const solid = new Uint8Array(N);
+  let U = 0.04;
+  let buoy = 0;          // lattice acceleration per kelvin
+  let kappa = 0.012;     // scalar diffusion, cells^2 per step
+  const eqIn = new Float32Array(9);
+
+  function feq(i, rho, vx, vy) {
+    const cu = cx[i] * vx + cy[i] * vy;
+    return w[i] * rho * (1 + 3 * cu + 4.5 * cu * cu - 1.5 * (vx * vx + vy * vy));
+  }
+  function setU(u) {
+    U = u;
+    for (let i = 0; i < 9; i++) eqIn[i] = feq(i, 1, U, 0);
+  }
+  setU(U);
+
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) {
+    const dx = x - pcx, dy = y - pcy;
+    if (dx * dx + dy * dy <= R * R) solid[y * nx + x] = 1;
+  }
+  // hull-adjacent fluid cells and a sampling ring around the pod
+  const hull = [];
+  const ring = [];
+  for (let y = 1; y < ny - 1; y++) for (let x = 1; x < nx - 1; x++) {
+    const idx = y * nx + x;
+    if (solid[idx]) continue;
+    if (solid[idx - 1] || solid[idx + 1] || solid[idx - nx] || solid[idx + nx]) hull.push(idx);
+    const d = Math.hypot(x - pcx, y - pcy);
+    if (d >= R + 2 && d <= R + 6) ring.push(idx);
+  }
+  const hullIdx = Int32Array.from(hull);
+  const ringIdx = Int32Array.from(ring);
+
+  // paint an approximate downstream plume so the first frame is not empty
+  function seedPlume(amp) {
+    for (let y = 0; y < ny; y++) for (let x = pcx; x < nx; x++) {
+      const idx = y * nx + x;
+      if (solid[idx]) continue;
+      const s = R * 0.55 + 0.06 * (x - pcx);
+      const dy = y - pcy;
+      T[idx] = amp * Math.exp(-(dy * dy) / (2 * s * s)) * Math.exp(-(x - pcx) / 120);
+    }
+  }
+
+  function init() {
+    for (let idx = 0; idx < N; idx++) {
+      const x = idx % nx, y = (idx / nx) | 0;
+      const pert = (solid[idx] ? 0 : 1) * 0.002 * Math.sin(0.35 * x) * Math.exp(-((y - pcy) * (y - pcy)) / 400);
+      for (let i = 0; i < 9; i++) f[i * N + idx] = feq(i, 1, U, pert);
+      ux[idx] = U; uy[idx] = 0; T[idx] = 0;
+    }
+  }
+  init();
+
+  function collide() {
+    const inv = 1 / tau;
+    for (let idx = 0; idx < N; idx++) {
+      if (solid[idx]) continue;
+      let rho = 0, mx = 0, my = 0;
+      for (let i = 0; i < 9; i++) {
+        const fi = f[i * N + idx];
+        rho += fi; mx += cx[i] * fi; my += cy[i] * fi;
+      }
+      const vx = mx / rho, vy0 = my / rho;
+      let ay = buoy * T[idx];
+      if (ay > 0.002) ay = 0.002;
+      const vy = vy0 + tau * ay;
+      ux[idx] = vx; uy[idx] = vy0 + 0.5 * ay;
+      const u2 = vx * vx + vy * vy;
+      for (let i = 0; i < 9; i++) {
+        const cu = cx[i] * vx + cy[i] * vy;
+        const e = w[i] * rho * (1 + 3 * cu + 4.5 * cu * cu - 1.5 * u2);
+        const k = i * N + idx;
+        f[k] += (e - f[k]) * inv;
+      }
+    }
+  }
+
+  function stream() {
+    for (let idx = 0; idx < N; idx++) {
+      if (solid[idx]) continue;
+      const x = idx % nx, y = (idx / nx) | 0;
+      for (let i = 0; i < 9; i++) {
+        const sx = x - cx[i], sy = y - cy[i];
+        let val;
+        if (sx < 0 || sy < 0 || sy >= ny) val = eqIn[i];
+        else if (sx >= nx) val = f[i * N + idx];
+        else {
+          const s = sy * nx + sx;
+          val = solid[s] ? f[opp[i] * N + idx] : f[i * N + s];
+        }
+        g[i * N + idx] = val;
+      }
+    }
+    const t = f; f = g; g = t;
+  }
+
+  function advectScalar() {
+    for (let idx = 0; idx < N; idx++) {
+      if (solid[idx]) { T2[idx] = 0; continue; }
+      const x = idx % nx, y = (idx / nx) | 0;
+      let px = x - ux[idx], py = y - uy[idx];
+      if (px < 0) px = 0; else if (px > nx - 1.001) px = nx - 1.001;
+      if (py < 0) py = 0; else if (py > ny - 1.001) py = ny - 1.001;
+      const x0 = px | 0, y0 = py | 0, fx = px - x0, fy = py - y0;
+      const i00 = y0 * nx + x0, i10 = i00 + 1, i01 = i00 + nx, i11 = i01 + 1;
+      let w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+      if (solid[i00]) w00 = 0; if (solid[i10]) w10 = 0; if (solid[i01]) w01 = 0; if (solid[i11]) w11 = 0;
+      const sw = w00 + w10 + w01 + w11;
+      T2[idx] = sw > 1e-6 ? (w00 * T[i00] + w10 * T[i10] + w01 * T[i01] + w11 * T[i11]) / sw : T[idx];
+    }
+    // diffusion (explicit, Neumann at solids and edges)
+    for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) {
+      const idx = y * nx + x;
+      if (solid[idx]) { T[idx] = 0; continue; }
+      const c = T2[idx];
+      const l = x > 0 && !solid[idx - 1] ? T2[idx - 1] : c;
+      const r = x < nx - 1 && !solid[idx + 1] ? T2[idx + 1] : c;
+      const d = y > 0 && !solid[idx - nx] ? T2[idx - nx] : c;
+      const u = y < ny - 1 && !solid[idx + nx] ? T2[idx + nx] : c;
+      T[idx] = c + kappa * (l + r + d + u - 4 * c);
+    }
+    for (let y = 0; y < ny; y++) T[y * nx] = 0;   // inflow is ambient
+  }
+
+  function deposit(dT) {
+    for (let k = 0; k < hullIdx.length; k++) T[hullIdx[k]] += dT;
+  }
+
+  function step(n, dTdep) {
+    for (let s = 0; s < n; s++) {
+      collide();
+      stream();
+      advectScalar();
+      if (dTdep > 0) deposit(dTdep);
+    }
+  }
+
+  function ringMean() {
+    let s = 0;
+    for (let k = 0; k < ringIdx.length; k++) s += T[ringIdx[k]];
+    return ringIdx.length ? s / ringIdx.length : 0;
+  }
+  function maxT() {
+    let m = 0;
+    for (let i = 0; i < N; i++) if (T[i] > m) m = T[i];
+    return m;
+  }
+  function sane() {
+    for (let i = 0; i < N; i += 7) {
+      if (!isFinite(ux[i]) || !isFinite(uy[i]) || !isFinite(T[i])) return false;
+    }
+    return true;
+  }
+
+  return {
+    nx, ny, N, R, cx: pcx, cy: pcy, solid, ux, uy,
+    get T() { return T; },
+    hullCount: hullIdx.length,
+    setU, setBuoy(b) { buoy = b; }, setKappa(k) { kappa = k; },
+    step, ringMean, maxT, sane, init, seedPlume,
+  };
+}
+if (typeof module !== 'undefined') module.exports = { createSim };
+
+
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+const lerp = (a, b, t) => a + (b - a) * t;
+const fmt = (x, d) => x.toFixed(d);
+
+/* ---------- constants ---------- */
+const K = { nx: 256, ny: 112, R: 13, cx: 52, cy: 56, tau: 0.52, D: 3.2, L: 12, Qnom: 0.96e6, Ahull: 121, C: 8e6, rcp: 4.1e6, flowLpm: 1450 };
+const dx = K.D / (2 * K.R);
+const COOL = [
+  { name: 'Normal', flowF: 1, rejF: 1 },
+  { name: 'One loop out', flowF: 0.6, rejF: 0.8 },
+  { name: 'Rejection lost', flowF: 1, rejF: 0.05 },
+  { name: 'Pumps out', flowF: 0.03, rejF: 0.08 },
+];
+const S = { v: 0.2, load: 1, tsea: 4, fin: 1.5, cool: 0, wl: 0, speed: 10, paused: false };
+let reduced = false;
+try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+if (reduced) S.paused = true;
+
+const sim = createSim({ nx: K.nx, ny: K.ny, R: K.R, cx: K.cx, cy: K.cy, tau: K.tau });
+let UL = 0.04;
+function applyFlow() {
+  UL = 0.012 + 0.07 * (S.v / 0.5);
+  sim.setU(UL);
+  sim.setBuoy(9.81 * 1e-4 * dx * UL * UL / (S.v * S.v));
+  sim.setKappa(0.012);
+}
+
+/* ---------- thermal / control model ---------- */
+const M = {};
+function resetModel() {
+  Object.assign(M, { t: 0, Tc: 24, Tj: 60, g: 1, tripped: false, trips: 0, thr: 0, deliv: 0, Qh: 0, Qit: 0, phi: 0, dTloop: 10, ringF: 0, dTc: 0, dTj: 0, hAcc: 0, hist: [], stepAcc: 0 });
+}
+function wlAt(t) {
+  if (S.wl === 0) return 0.78 + 0.10 * Math.sin(6.2832 * t / 45) + 0.04 * Math.sin(6.2832 * t / 7.3 + 1);
+  const ph = (t % 18) / 18;
+  return ph < 0.85 ? 1 : 0.62;
+}
+function stepModel(h) {
+  const c = COOL[S.cool];
+  const act = M.tripped ? 0 : M.g;
+  const Pn = S.load * wlAt(M.t) * act;
+  const Qit = K.Qnom * Pn;
+  const Tsink = S.tsea + M.ringF;
+  const UA = (200 + 1200 * S.v) * K.Ahull * S.fin * c.rejF;
+  M.phi = clamp((M.Tc - 23) / 5, 0, 1);
+  const Qh = UA * M.phi * Math.max(M.Tc - Tsink, 0);
+  const prevTc = M.Tc;
+  M.Tc += (Qit - Qh) / K.C * h;
+  M.dTc = lerp(M.dTc, (M.Tc - prevTc) / h, Math.min(1, h / 8));
+  M.Qh = Qh; M.Qit = Qit;
+  M.dTloop = Math.min(45, Qit / (24.6 * c.flowF * 3900));
+  const TjT = M.Tc + 38 * Pn / Math.sqrt(c.flowF);
+  const prevTj = M.Tj;
+  M.Tj += (TjT - M.Tj) * Math.min(1, h / 3);
+  M.dTj = (M.Tj - prevTj) / h;
+  if (M.tripped) {
+    M.g = 0;
+    const proj = M.Tc + 38 * S.load * 0.95 / Math.sqrt(c.flowF);
+    if (proj < 72) { M.tripped = false; M.g = 0.1; }
+  } else if (M.Tj > 88) {
+    M.tripped = true; M.trips++; M.g = 0;
+  } else {
+    const gT = clamp(1 - (M.Tj - 70) / 20, 0, 1);
+    if (gT < M.g) M.g += (gT - M.g) * Math.min(1, h / 2);
+    else M.g = Math.min(gT, M.g + 0.03 * h);
+  }
+  if (!M.tripped && M.g < 0.98 && S.load > 0) M.thr += h;
+  M.deliv += (M.tripped ? 0 : M.g) * h;
+  M.t += h;
+  M.hAcc += h;
+  if (M.hAcc >= 1) {
+    M.hAcc -= 1;
+    M.hist.push({ t: M.t, Tj: M.Tj, Tc: M.Tc, g: M.tripped ? 0 : M.g * 100 });
+    if (M.hist.length > 300) M.hist.shift();
+  }
+}
+function settle() {
+  const saved = S.cool; S.cool = 0;
+  for (let i = 0; i < 2000; i++) stepModel(1);
+  S.cool = saved;
+  M.t = 0; M.hist = []; M.trips = 0; M.thr = 0; M.deliv = 0; M.hAcc = 0;
+  M.tripped = false; M.g = 1;
+}
+function bulkRise() { return M.Qh / (K.rcp * S.v * K.D * K.L); }
+
+/* ---------- flow tracers ---------- */
+const NT = 420;
+const tx = new Float32Array(NT), ty = new Float32Array(NT);
+function respawn(i, anywhere) {
+  tx[i] = anywhere ? Math.random() * K.nx : Math.random() * 3;
+  ty[i] = 1 + Math.random() * (K.ny - 3);
+}
+for (let i = 0; i < NT; i++) respawn(i, true);
+function moveTracers(steps) {
+  for (let i = 0; i < NT; i++) {
+    const ix = tx[i] | 0, iy = ty[i] | 0, idx = iy * K.nx + ix;
+    if (ix < 0 || ix >= K.nx - 1 || iy < 1 || iy >= K.ny - 1 || sim.solid[idx]) { respawn(i, false); continue; }
+    tx[i] += sim.ux[idx] * steps;
+    ty[i] += sim.uy[idx] * steps;
+  }
+}
+
+/* ---------- canvases ---------- */
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+function mk(id, ar) { const c = $(id); return { c, ctx: c.getContext('2d'), W: 800, H: Math.round(800 / ar), ar }; }
+const flow = mk('flow', 256 / 112), hist = mk('hist', 3.4), col = mk('column', 8 / 7), cut = mk('cut', 1);
+const all = [flow, hist, col, cut];
+function resizeAll() {
+  for (const o of all) {
+    const w = o.c.clientWidth || 800;
+    if (o === hist) { o.ar = w < 520 ? 2 : 3.4; o.c.style.aspectRatio = String(o.ar); }
+    o.W = w; o.H = Math.round(w / o.ar);
+    o.c.width = Math.round(w * dpr); o.c.height = Math.round(o.H * dpr);
+    o.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  dirty = true;
+}
+let dirty = true;
+try { new ResizeObserver(resizeAll).observe(document.body); } catch (e) { window.addEventListener('resize', resizeAll); }
+
+/* temperature palette */
+const LUT = (function () {
+  const stops = [[0, [11, 34, 48]], [0.15, [27, 47, 92]], [0.35, [91, 42, 134]], [0.55, [179, 58, 106]], [0.75, [242, 112, 61]], [0.9, [255, 179, 71]], [1, [255, 241, 201]]];
+  const arr = new Uint32Array(256), rgb = [];
+  for (let i = 0; i < 256; i++) {
+    const f = i / 255; let k = 0;
+    while (k < stops.length - 2 && f > stops[k + 1][0]) k++;
+    const a = stops[k], b = stops[k + 1], t = clamp((f - a[0]) / (b[0] - a[0]), 0, 1);
+    const r = Math.round(lerp(a[1][0], b[1][0], t)), g = Math.round(lerp(a[1][1], b[1][1], t)), bl = Math.round(lerp(a[1][2], b[1][2], t));
+    rgb.push([r, g, bl]);
+    arr[i] = ((255 << 24) | (bl << 16) | (g << 8) | r) >>> 0;
+  }
+  return { arr, rgb };
+})();
+function lutCss(f, a) { const c = LUT.rgb[clamp(Math.round(f * 255), 0, 255)]; return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (a == null ? 1 : a) + ')'; }
+const TST = [[79, 195, 247], [185, 167, 216], [255, 122, 61]];
+function tcol(T, lo, hi, a) {
+  const f = clamp((T - lo) / (hi - lo), 0, 1), k = f < 0.5 ? 0 : 1, t = f < 0.5 ? f * 2 : (f - 0.5) * 2;
+  const A0 = TST[k], B0 = TST[k + 1];
+  return 'rgba(' + Math.round(lerp(A0[0], B0[0], t)) + ',' + Math.round(lerp(A0[1], B0[1], t)) + ',' + Math.round(lerp(A0[2], B0[2], t)) + ',' + (a == null ? 1 : a) + ')';
+}
+const FONT = '11px "DM Mono",ui-monospace,monospace';
+
+const off = document.createElement('canvas'); off.width = K.nx; off.height = K.ny;
+const octx = off.getContext('2d'); const img = octx.createImageData(K.nx, K.ny); const u32 = new Uint32Array(img.data.buffer);
+const SOLIDCOL = ((255 << 24) | (40 << 16) | (34 << 8) | 19) >>> 0;
+let Tscale = 0.1;
+const A = { t: 0 };
+
+function arrow(ctx, x0, y0, x1, y1, head) {
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - head * Math.cos(a - 0.5), y1 - head * Math.sin(a - 0.5));
+  ctx.lineTo(x1 - head * Math.cos(a + 0.5), y1 - head * Math.sin(a + 0.5));
+  ctx.closePath(); ctx.fill();
+}
+function thull() { const ts = S.tsea + M.ringF; return ts + 0.7 * Math.max(M.Tc - ts, 0) * Math.max(M.phi, 0.3); }
+
+/* ---------- draw: flow ---------- */
+function drawFlow() {
+  const { ctx, W, H } = flow; const s = W / K.nx;
+  const T = sim.T, inv = 1 / Tscale, solid = sim.solid;
+  for (let i = 0; i < sim.N; i++) {
+    if (solid[i]) { u32[i] = SOLIDCOL; continue; }
+    let f = T[i] * inv; f = f <= 0 ? 0 : f >= 1 ? 1 : Math.sqrt(f);
+    u32[i] = LUT.arr[(f * 255) | 0];
+  }
+  octx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, 0, 0, W, H);
+  // tracers as streaks
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(190,230,245,.28)'; ctx.beginPath();
+  for (let i = 0; i < NT; i++) {
+    const ix = tx[i] | 0, iy = ty[i] | 0; if (ix < 0 || ix >= K.nx || iy < 0 || iy >= K.ny) continue;
+    const idx = iy * K.nx + ix, ux = sim.ux[idx], uy = sim.uy[idx];
+    ctx.moveTo(tx[i] * s, ty[i] * s); ctx.lineTo((tx[i] - ux * 90) * s, (ty[i] - uy * 90) * s);
+  }
+  ctx.stroke();
+  // pod
+  const px = K.cx * s, py = K.cy * s, pr = K.R * s;
+  const finL = (S.fin - 1) / 2 * 0.45 * pr;
+  if (finL > 0.5) {
+    ctx.strokeStyle = 'rgba(140,165,175,.8)'; ctx.lineWidth = Math.max(1, s * 0.5); ctx.beginPath();
+    for (let k = 0; k < 36; k++) { const a = k * Math.PI / 18; ctx.moveTo(px + Math.cos(a) * pr, py + Math.sin(a) * pr); ctx.lineTo(px + Math.cos(a) * (pr + finL), py + Math.sin(a) * (pr + finL)); }
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, 6.2832); ctx.fillStyle = '#10202a'; ctx.fill();
+  ctx.lineWidth = Math.max(2, pr * 0.14); ctx.strokeStyle = lutCss(clamp((M.Tc - S.tsea) / 32, 0, 1)); ctx.beginPath(); ctx.arc(px, py, pr * 0.78, 0, 6.2832); ctx.stroke();
+  ctx.lineWidth = Math.max(1.5, pr * 0.08); ctx.strokeStyle = lutCss(clamp((thull() - S.tsea) / 32, 0, 1)); ctx.beginPath(); ctx.arc(px, py, pr, 0, 6.2832); ctx.stroke();
+  // outward heat arrows
+  if (M.Qh > 2e4) {
+    const len = pr * (0.25 + 0.7 * Math.min(1, M.Qh / 1.2e6));
+    ctx.strokeStyle = 'rgba(255,138,61,.9)'; ctx.fillStyle = 'rgba(255,138,61,.9)'; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 12; k++) {
+      const a = k * Math.PI / 6 + 0.26, r0 = pr + finL + 3;
+      arrow(ctx, px + Math.cos(a) * r0, py + Math.sin(a) * r0, px + Math.cos(a) * (r0 + len), py + Math.sin(a) * (r0 + len), 5);
+    }
+  }
+  // annotations
+  const compact = W < 560;
+  ctx.font = FONT; ctx.fillStyle = 'rgba(219,231,235,.9)'; ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillText('current ' + fmt(S.v, 2) + ' m/s', 10, 18);
+  ctx.strokeStyle = 'rgba(219,231,235,.8)'; ctx.fillStyle = 'rgba(219,231,235,.8)'; ctx.lineWidth = 1.5;
+  arrow(ctx, 10, 28, 56, 28, 6);
+  ctx.fillStyle = 'rgba(219,231,235,.75)'; ctx.textAlign = 'center';
+  if (W >= 560) ctx.fillText('Ø 3.2 m pod', px, py + pr + finL + 16);
+  if (!compact) { ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,200,150,.85)'; ctx.fillText('warm wake', (K.cx + 70) * s, py - 16 * s); }
+  // legend
+  ctx.textAlign = 'left';
+  const lg = ctx.createLinearGradient(10, 0, 130, 0);
+  for (let i = 0; i <= 8; i++) lg.addColorStop(i / 8, lutCss(i / 8));
+  ctx.fillStyle = lg; ctx.fillRect(10, H - 26, 120, 8);
+  ctx.fillStyle = 'rgba(219,231,235,.85)'; ctx.fillText('0 to ' + fmt(Tscale, Tscale < 1 ? 2 : 1) + ' K above ambient', 10, H - 32);
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(138,164,174,.9)'; if (!compact) ctx.fillText('colour scale adapts', 10, H - 8);
+  // scale bar
+  const sb = 5 / dx * s; ctx.strokeStyle = 'rgba(219,231,235,.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(W - 14 - sb, H - 18); ctx.lineTo(W - 14, H - 18); ctx.stroke();
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(219,231,235,.85)'; ctx.fillText('5 m', W - 14, H - 24);
+}
+
+/* ---------- draw: history ---------- */
+function drawHist() {
+  const { ctx, W, H } = hist;
+  ctx.clearRect(0, 0, W, H);
+  const L = 36, R = 10, T = 24, B = 22, pw = W - L - R, ph = H - T - B;
+  const Y = (v) => T + ph * (1 - clamp(v, 0, 100) / 100);
+  ctx.font = FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+  for (let v = 0; v <= 100; v += 25) {
+    ctx.strokeStyle = 'rgba(138,164,174,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke();
+    ctx.fillStyle = 'rgba(138,164,174,.9)'; ctx.fillText(String(v), L - 6, Y(v));
+  }
+  ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,179,71,.7)'; ctx.beginPath(); ctx.moveTo(L, Y(70)); ctx.lineTo(W - R, Y(70)); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,95,95,.7)'; ctx.beginPath(); ctx.moveTo(L, Y(88)); ctx.lineTo(W - R, Y(88)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(255,179,71,.95)'; ctx.fillText('throttle 70', W - R - 2, Y(70) - 2);
+  ctx.fillStyle = 'rgba(255,95,95,.95)'; ctx.fillText('trip 88', W - R - 2, Y(88) - 2);
+  ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(138,164,174,.9)';
+  ctx.textAlign = 'left'; ctx.fillText('−5 min', L, H - B + 6);
+  ctx.textAlign = 'center'; ctx.fillText('−2.5', L + pw / 2, H - B + 6);
+  ctx.textAlign = 'right'; ctx.fillText('now', W - R, H - B + 6);
+  const h = M.hist, t1 = M.t, t0 = t1 - 300;
+  const X = (t) => L + pw * clamp((t - t0) / 300, 0, 1);
+  function line(key, color) {
+    if (h.length < 2) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < h.length; i++) { const x = X(h[i].t), y = Y(h[i][key]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  line('g', '#4fd1a1'); line('Tc', '#4fc3f7'); line('Tj', '#ff8a3d');
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; let lx = L;
+  [['#ff8a3d', 'junction °C'], ['#4fc3f7', 'coolant °C'], ['#4fd1a1', 'compute %']].forEach(function (e) {
+    ctx.fillStyle = e[0]; ctx.fillRect(lx, 8, 12, 3); ctx.fillStyle = 'rgba(219,231,235,.9)'; ctx.fillText(e[1], lx + 16, 10); lx += 16 + ctx.measureText(e[1]).width + 14;
+  });
+}
+
+/* ---------- draw: cutaway ---------- */
+function drawCut() {
+  const { ctx, W, H } = cut; ctx.clearRect(0, 0, W, H);
+  const u = W, cx = W / 2, cy = H * 0.58;
+  const X = (x) => cx + x * u, Y = (y) => cy + y * u;
+  const c = COOL[S.cool];
+  const act = M.tripped ? 0 : S.load * M.g;
+  const sup = M.Tc - M.dTloop / 2, ret = M.Tc + M.dTloop / 2;
+  const stalled = c.flowF < 0.1;
+  const Rh = 0.36 * u;
+  ctx.fillStyle = '#0a2330'; ctx.fillRect(0, 0, W, H);
+  // fins
+  const finL = (S.fin - 1) / 2 * 0.04 * u;
+  if (finL > 0.5) {
+    ctx.strokeStyle = 'rgba(140,165,175,.85)'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let k = 0; k < 36; k++) { const a = k * Math.PI / 18; ctx.moveTo(cx + Math.cos(a) * Rh, cy + Math.sin(a) * Rh); ctx.lineTo(cx + Math.cos(a) * (Rh + finL), cy + Math.sin(a) * (Rh + finL)); }
+    ctx.stroke();
+  }
+  // heat arrows outward
+  if (M.Qh > 2e4) {
+    const len = (0.02 + 0.05 * Math.min(1, M.Qh / 1.2e6)) * u;
+    ctx.strokeStyle = 'rgba(255,138,61,.9)'; ctx.fillStyle = 'rgba(255,138,61,.9)'; ctx.lineWidth = 2;
+    for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8 + 0.2, r0 = Rh + finL + 0.012 * u; arrow(ctx, cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len), 6); }
+  }
+  // hull
+  ctx.lineWidth = 0.014 * u; ctx.strokeStyle = tcol(thull(), S.tsea, S.tsea + 30, 1);
+  ctx.beginPath(); ctx.arc(cx, cy, Rh, 0, 6.2832); ctx.stroke();
+  // jacket segments
+  const NS = 48; ctx.lineWidth = 0.04 * u; ctx.lineCap = 'butt';
+  for (let side = -1; side <= 1; side += 2) {
+    for (let i = 0; i < NS; i++) {
+      const f = (i + 0.5) / NS, a = -Math.PI / 2 + side * f * Math.PI, d = Math.PI / NS * 0.55;
+      ctx.strokeStyle = stalled ? tcol(M.Tc, 16, 40, 0.8) : tcol(ret - (ret - sup) * f, 16, 40, 1);
+      ctx.beginPath(); if (side > 0) ctx.arc(cx, cy, 0.322 * u, a - d, a + d); else ctx.arc(cx, cy, 0.322 * u, a - d, a + d); ctx.stroke();
+    }
+  }
+  ctx.beginPath(); ctx.arc(cx, cy, 0.298 * u, 0, 6.2832); ctx.fillStyle = '#0f1b22'; ctx.fill();
+  // coolant dots on jacket
+  if (!stalled) {
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    const n = 10, sp = A.t * 0.12 * c.flowF;
+    for (let side = -1; side <= 1; side += 2) for (let i = 0; i < n; i++) {
+      const f = (sp + i / n) % 1, a = -Math.PI / 2 + side * f * Math.PI;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 0.322 * u, cy + Math.sin(a) * 0.322 * u, 2, 0, 6.2832); ctx.fill();
+    }
+  }
+  // racks
+  for (let side = -1; side <= 1; side += 2) {
+    const x0 = side < 0 ? -0.225 : 0.085, w = 0.14, y0 = -0.17, h = 0.34;
+    ctx.fillStyle = '#16282f'; ctx.fillRect(X(x0), Y(y0), w * u, h * u);
+    ctx.strokeStyle = '#2d4752'; ctx.lineWidth = 1; ctx.strokeRect(X(x0), Y(y0), w * u, h * u);
+    const rows = 24, rh = h / rows;
+    for (let i = 0; i < rows; i++) {
+      const sw = i >= 9 && i <= 14;
+      if (M.tripped) ctx.fillStyle = '#26343b';
+      else if (sw) ctx.fillStyle = '#1f4a63';
+      else ctx.fillStyle = tcol(M.Tj + Math.sin(i * 1.7 + side) * 2.5, 30, 95, 0.9);
+      ctx.fillRect(X(x0 + 0.006), Y(y0 + i * rh + rh * 0.12), (w - 0.012) * u, rh * 0.74 * u);
+    }
+    // NVLink sparks toward/away from switch rows
+    const m = Math.ceil(6 * act);
+    ctx.fillStyle = '#9fe3ff';
+    const ex = side < 0 ? x0 + w - 0.004 : x0 + 0.004;
+    for (let i = 0; i < m; i++) {
+      const f = (A.t * 0.9 + i / 6 + (side > 0 ? 0.13 : 0)) % 1, half = i % 2 ? 1 : -1;
+      const yy = (i % 3 === 0) ? lerp(half * 0.17, 0, f) : lerp(0, half * 0.17, f);
+      ctx.fillRect(X(ex) - 1.5, Y(yy) - 5, 3, 10);
+    }
+  }
+  // switch box and cables
+  const fx = -0.025, px = 0.025;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(79,195,247,.55)'; ctx.beginPath(); ctx.moveTo(X(fx), Y(-0.53)); ctx.lineTo(X(fx), Y(0.25)); ctx.stroke();
+  ctx.strokeStyle = 'rgba(242,201,76,.55)'; ctx.beginPath(); ctx.moveTo(X(px), Y(-0.53)); ctx.lineTo(X(px), Y(0.25)); ctx.stroke();
+  ctx.fillStyle = '#16384a'; ctx.fillRect(X(-0.082), Y(-0.268), 0.164 * u, 0.05 * u);
+  ctx.strokeStyle = 'rgba(79,195,247,.8)'; ctx.lineWidth = 1; ctx.strokeRect(X(-0.082), Y(-0.268), 0.164 * u, 0.05 * u);
+  ctx.font = '9px "DM Mono",monospace'; ctx.fillStyle = 'rgba(219,231,235,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('pod switch', X(0), Y(-0.243));
+  // manifolds
+  ctx.lineWidth = 0.012 * u;
+  ctx.strokeStyle = stalled ? tcol(M.Tc, 16, 40, 0.7) : tcol(sup, 16, 40, 1); ctx.beginPath(); ctx.moveTo(X(-0.062), Y(0.3)); ctx.lineTo(X(-0.062), Y(-0.19)); ctx.stroke();
+  ctx.strokeStyle = stalled ? tcol(M.Tc, 16, 40, 0.7) : tcol(ret, 16, 40, 1); ctx.beginPath(); ctx.moveTo(X(0.062), Y(0.25)); ctx.lineTo(X(0.062), Y(-0.31)); ctx.stroke();
+  if (!stalled) {
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    for (let i = 0; i < 6; i++) { const f = (A.t * 0.18 * c.flowF + i / 6) % 1; ctx.beginPath(); ctx.arc(X(-0.062), Y(lerp(0.3, -0.19, f)), 1.8, 0, 6.2832); ctx.fill(); ctx.beginPath(); ctx.arc(X(0.062), Y(lerp(0.25, -0.31, f)), 1.8, 0, 6.2832); ctx.fill(); }
+  }
+  // packets
+  const nd = Math.ceil(8 * act);
+  ctx.fillStyle = '#4fc3f7';
+  for (let i = 0; i < nd; i++) { const f = (A.t * 0.35 + i / 8) % 1, up = i % 2 === 0; ctx.beginPath(); ctx.arc(X(fx), Y(up ? lerp(0.25, -0.53, f) : lerp(-0.53, 0.25, f)), 2.5, 0, 6.2832); ctx.fill(); }
+  const np = Math.ceil(6 * act);
+  ctx.fillStyle = '#f2c94c';
+  for (let i = 0; i < np; i++) { const f = (A.t * 0.3 + i / 6) % 1; ctx.fillRect(X(px) - 2.5, Y(lerp(-0.53, 0.25, f)) - 2.5, 5, 5); }
+  // labels
+  const compact = W < 420; ctx.font = (compact ? '9px' : '10px') + ' "DM Mono",monospace'; ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(138,164,174,.95)';
+  ctx.fillText('to surface', X(0.04), Y(-0.5));
+  ctx.fillText('umbilical', X(0.04), Y(-0.5) + 12);
+    ctx.textAlign = 'left'; ctx.fillStyle = stalled ? 'rgba(255,95,95,.95)' : tcol(sup, 16, 40, 1);
+  ctx.fillText('supply', 6, Y(0.2)); ctx.fillText(stalled ? 'stalled' : fmt(sup, 1) + '°', 6, Y(0.2) + 12);
+  ctx.textAlign = 'right'; ctx.fillStyle = stalled ? 'rgba(255,95,95,.95)' : tcol(ret, 16, 40, 1);
+  ctx.fillText('return', W - 6, Y(-0.3)); ctx.fillText(stalled ? 'stalled' : fmt(ret, 1) + '°', W - 6, Y(-0.3) + 12);
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(138,164,174,.95)';
+  ctx.fillText('sea · 1.6 MPa', W - 6, H - 8);
+  ctx.textAlign = 'left'; ctx.fillText('dry N₂ · racks ' + (M.tripped ? 'tripped' : 'live'), 6, H - 8);
+}
+
+/* ---------- draw: ocean column ---------- */
+function polyPoint(pts, f) {
+  let tot = 0; const seg = [];
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); tot += l; }
+  let d = clamp(f, 0, 1) * tot;
+  for (let i = 0; i < seg.length; i++) {
+    if (d <= seg[i] || i === seg.length - 1) { const t = seg[i] ? d / seg[i] : 0; return [lerp(pts[i][0], pts[i + 1][0], t), lerp(pts[i][1], pts[i + 1][1], t)]; }
+    d -= seg[i];
+  }
+  return pts[pts.length - 1];
+}
+function drawCol() {
+  const { ctx, W, H } = col;
+  const act = M.tripped ? 0 : S.load * M.g;
+  const yd = (d) => H * (0.14 + 0.76 * d / 200);
+  ctx.fillStyle = '#0a1318'; ctx.fillRect(0, 0, W, H * 0.14);
+  const g = ctx.createLinearGradient(0, yd(0), 0, H); g.addColorStop(0, '#0f3b4c'); g.addColorStop(1, '#06141b');
+  ctx.fillStyle = g; ctx.fillRect(0, yd(0), W, H - yd(0));
+  // surface
+  ctx.strokeStyle = 'rgba(160,215,235,.6)'; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let x = 0; x <= W; x += 6) { const y = yd(0) + Math.sin(x * 0.05 + A.t * 1.4) * 1.6; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+  ctx.stroke();
+  // depth ticks
+  ctx.font = '10px "DM Mono",monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  [0, 50, 100, 150, 200].forEach(function (d) {
+    ctx.strokeStyle = 'rgba(138,164,174,.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, yd(d)); ctx.lineTo(W, yd(d)); ctx.stroke();
+    ctx.fillStyle = 'rgba(138,164,174,.9)'; ctx.fillText(d + ' m', 6, yd(d) - 7);
+  });
+  const platX = 0.25 * W, trunkY = 0.62 * H, podXs = [0.42, 0.55, 0.68, 0.81].map((f) => f * W), podY = yd(150), podW = 0.095 * W, podH = Math.max(14, 0.04 * H);
+  // mooring
+  ctx.strokeStyle = 'rgba(138,164,174,.35)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+  [[platX - 0.012 * W, yd(25), 0.06 * W, H * 0.97], [platX - 0.006 * W, yd(25), 0.15 * W, H * 0.97]].forEach(function (m) { ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[2], m[3]); ctx.stroke(); });
+  ctx.setLineDash([]);
+  // plume glow (schematic)
+  const heatF = clamp(M.Qh / 0.96e6, 0, 1.3);
+  ctx.save(); ctx.translate(podXs[3] + podW / 2, podY); ctx.scale(1, 0.3);
+  const pg = ctx.createRadialGradient(0, 0, 0, 0, 0, 0.3 * W);
+  pg.addColorStop(0, 'rgba(255,138,61,' + (0.4 * heatF) + ')'); pg.addColorStop(1, 'rgba(255,138,61,0)');
+  ctx.fillStyle = pg; ctx.fillRect(0, -0.3 * W, 0.3 * W, 0.6 * W); ctx.restore();
+  // umbilical lines
+  const trunk = [[platX, yd(0)], [platX, trunkY], [podXs[3], trunkY]];
+  ctx.strokeStyle = 'rgba(79,195,247,.4)'; ctx.lineWidth = 2; ctx.beginPath(); trunk.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke();
+  ctx.strokeStyle = 'rgba(242,201,76,.4)'; ctx.beginPath(); trunk.forEach((p, i) => (i ? ctx.lineTo(p[0] + 4, p[1] + 4) : ctx.moveTo(p[0] + 4, p[1] + 4))); ctx.stroke();
+  podXs.forEach(function (x) {
+    ctx.strokeStyle = 'rgba(79,195,247,.4)'; ctx.beginPath(); ctx.moveTo(x, trunkY); ctx.lineTo(x, podY - podH / 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(242,201,76,.4)'; ctx.beginPath(); ctx.moveTo(x + 4, trunkY + 4); ctx.lineTo(x + 4, podY - podH / 2); ctx.stroke();
+  });
+  // pods
+  podXs.forEach(function (x, i) {
+    const gl = ctx.createRadialGradient(x, podY, 2, x, podY, podW * 0.9);
+    gl.addColorStop(0, 'rgba(255,138,61,' + (0.55 * heatF) + ')'); gl.addColorStop(1, 'rgba(255,138,61,0)');
+    ctx.fillStyle = gl; ctx.fillRect(x - podW, podY - podW, podW * 2, podW * 2);
+    ctx.fillStyle = M.tripped ? '#3a2b2b' : '#1b2f3a'; ctx.strokeStyle = lutCss(clamp((thull() - S.tsea) / 32, 0, 1)); ctx.lineWidth = 2;
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - podW / 2, podY - podH / 2, podW, podH, podH / 2); else ctx.rect(x - podW / 2, podY - podH / 2, podW, podH); ctx.fill(); ctx.stroke();
+  });
+  // current chevrons
+  const sp = 0.07 * W, off0 = (A.t * S.v * W * 0.12) % sp;
+  ctx.strokeStyle = 'rgba(160,215,235,.35)'; ctx.lineWidth = 1.2;
+  [podY - 0.085 * H, podY + 0.085 * H].forEach(function (y) {
+    for (let x = -sp + off0; x < W; x += sp) { ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x, y); ctx.lineTo(x - 4, y + 4); ctx.stroke(); }
+  });
+  // platform and turbine
+  ctx.fillStyle = '#2a3f49'; ctx.fillRect(platX - 0.012 * W, yd(0) - 0.02 * H, 0.024 * W, yd(30) - yd(0) + 0.02 * H);
+  ctx.fillStyle = '#c9d6db'; ctx.fillRect(platX - 2, 0.05 * H, 4, yd(0) - 0.05 * H - 0.02 * H);
+  const hubY = 0.05 * H, bl = 0.045 * H, ang = A.t * 1.3;
+  ctx.strokeStyle = '#c9d6db'; ctx.lineWidth = 2;
+  for (let k = 0; k < 3; k++) { const a = ang + k * 2.0944; ctx.beginPath(); ctx.moveTo(platX, hubY); ctx.lineTo(platX + Math.cos(a) * bl, hubY + Math.sin(a) * bl); ctx.stroke(); }
+  // satellite
+  const sx = 0.8 * W, sy = 0.06 * H;
+  ctx.fillStyle = '#9fb3bb'; ctx.fillRect(sx - 6, sy - 5, 12, 10); ctx.fillStyle = '#4a6a78'; ctx.fillRect(sx - 22, sy - 3, 14, 6); ctx.fillRect(sx + 8, sy - 3, 14, 6);
+  const link = [[sx, sy + 6], [platX + 4, hubY + 4]];
+  ctx.strokeStyle = 'rgba(79,195,247,.45)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(link[0][0], link[0][1]); ctx.lineTo(link[1][0], link[1][1]); ctx.stroke(); ctx.setLineDash([]);
+  // packets
+  const nd = Math.ceil(6 * act), np = Math.ceil(5 * act);
+  ctx.fillStyle = '#4fc3f7';
+  for (let i = 0; i < nd; i++) { const f = (A.t * 0.2 + i / 6) % 1, p = polyPoint(link, i % 2 ? f : 1 - f); ctx.beginPath(); ctx.arc(p[0], p[1], 2.5, 0, 6.2832); ctx.fill(); }
+  podXs.forEach(function (x, pi) {
+    const path = [[platX, yd(0)], [platX, trunkY], [x, trunkY], [x, podY - podH / 2]];
+    for (let i = 0; i < Math.ceil(3 * act); i++) {
+      const f = (A.t * 0.16 + i / 3 + pi * 0.11) % 1, down = i % 2 === 0, p = polyPoint(path, down ? f : 1 - f);
+      ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.arc(p[0], p[1], 2.4, 0, 6.2832); ctx.fill();
+    }
+    const ppath = path.map((q) => [q[0] + 4, q[1] + 4]);
+    for (let i = 0; i < Math.ceil(2 * act); i++) {
+      const f = (A.t * 0.14 + i / 2 + pi * 0.07) % 1, p = polyPoint(ppath, f);
+      ctx.fillStyle = '#f2c94c'; ctx.fillRect(p[0] - 2.5, p[1] - 2.5, 5, 5);
+    }
+  });
+  // labels
+  const compact = W < 520; ctx.font = (compact ? '9px' : '11px') + ' "DM Mono",monospace'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(219,231,235,.9)'; ctx.textAlign = 'left';
+  ctx.fillText(compact ? 'platform' : 'floating wind platform', platX + 0.03 * W, yd(0) + 0.05 * H);
+  ctx.textAlign = 'right'; ctx.fillText(compact ? 'satellite' : 'satellite · 1 Gb/s (assumed)', sx - 28, sy + 4);
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(138,164,174,.95)';
+  ctx.fillText('umbilical: fibre + power', platX + 0.015 * W, trunkY - 8);
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(219,231,235,.9)';
+  ctx.fillText((compact ? '4 pods shown' : '4 of 12 pods shown (10 duty + 2 spare)'), (podXs[0] + podXs[3]) / 2, podY + 0.125 * H);
+  ctx.fillStyle = 'rgba(255,179,120,.95)'; ctx.textAlign = 'right';
+  if (!compact) ctx.fillText('bulk warming +' + fmt(bulkRise() * 10, 2) + ' K for a 10-pod node', W - 8, podY - 0.1 * H - 4);
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(138,164,174,.95)'; ctx.fillText('mooring to seabed', 0.02 * W, H * 0.93);
+}
+
+/* ---------- UI ---------- */
+const rungs = [
+  { n: 'Rack NVLink fabric', i: '130 TB/s, NVL72 spec', v: 1.04e15 },
+  { n: 'Umbilical fibre', i: 'assumed 3.2 Tb/s', v: 3.2e12 },
+  { n: 'Satellite link', i: 'assumed 1 Gb/s', v: 1e9 },
+  { n: 'Traffic crossing it now', i: '', v: 2.62e8, dyn: true },
+];
+const ladder = $('ladder');
+rungs.forEach(function (r, i) {
+  const d = document.createElement('div'); d.className = 'rung';
+  d.innerHTML = '<div class="n">' + r.n + ' <i>' + r.i + '</i></div><div class="q" id="rq' + i + '"></div><div class="bar"><b id="rb' + i + '"></b></div>';
+  ladder.appendChild(d);
+});
+function bits(v) { return v >= 1e15 ? fmt(v / 1e15, 2) + ' Pb/s' : v >= 1e12 ? fmt(v / 1e12, 1) + ' Tb/s' : v >= 1e9 ? fmt(v / 1e9, 1) + ' Gb/s' : fmt(v / 1e6, 0) + ' Mb/s'; }
+const dlRows = [['Heat load now', 'r-q'], ['Compute delivered now', 'r-g'], ['Delivered since start', 'r-d'], ['Time throttled', 'r-thr'], ['Trips', 'r-trip'], ['Coolant trend', 'r-trend'], ['Margin to throttle', 'r-marg'], ['Reynolds no. (sim / sea)', 'r-re']];
+$('dl').innerHTML = dlRows.map((r) => '<dt>' + r[0] + '</dt><dd id="' + r[1] + '">–</dd>').join('');
+$('n-re').textContent = String(Math.round(UL * 2 * K.R / ((K.tau - 0.5) / 3)));
+
+function setS(el, s) { el.setAttribute('data-s', s); }
+function updateUI() {
+  const c = COOL[S.cool];
+  const sup = M.Tc - M.dTloop / 2, ret = M.Tc + M.dTloop / 2, stalled = c.flowF < 0.1;
+  $('v1').textContent = fmt(M.Tj, 0) + ' °C';
+  $('s1').textContent = M.tripped ? 'tripped, waiting to re-arm' : 'throttle above 70, trip above 88';
+  setS($('c1'), M.tripped || M.Tj > 88 ? 'crit' : M.Tj > 70 ? 'warn' : 'ok');
+  $('v2').textContent = stalled ? 'no flow' : fmt(sup, 1) + ' → ' + fmt(ret, 1) + ' °C';
+  $('s2').textContent = fmt(K.flowLpm * c.flowF, 0) + ' L/min · spec 18 to 32 °C';
+  setS($('c2'), stalled || ret > 40 ? 'crit' : ret > 32 ? 'warn' : 'ok');
+  $('v3').textContent = fmt(M.Qh / 1e6, 2) + ' MW';
+  $('s3').textContent = fmt(M.phi * 100, 0) + '% of exchanger in use · U ' + fmt(200 + 1200 * S.v, 0) + ' W/m²K';
+  setS($('c3'), M.phi > 0.98 ? 'warn' : 'ok');
+  $('v4').textContent = '+' + fmt(bulkRise(), 3) + ' K';
+  $('s4').textContent = 'bulk wake · near-hull ring +' + fmt(M.ringF, 2) + ' K';
+  setS($('c4'), 'ok');
+  const act = M.tripped ? 0 : M.g;
+  $('r-q').textContent = fmt(M.Qit / 1e6, 2) + ' MW';
+  $('r-g').textContent = fmt(act * 100, 0) + '%';
+  $('r-d').textContent = M.t > 1 ? fmt(M.deliv / M.t * 100, 1) + '%' : '–';
+  $('r-thr').textContent = fmt(M.thr, 0) + ' s';
+  $('r-trip').textContent = String(M.trips);
+  $('r-trend').textContent = (M.dTc >= 0 ? '+' : '') + fmt(M.dTc * 60, 1) + ' K/min';
+  $('r-marg').textContent = fmt(70 - M.Tj, 0) + ' K';
+  $('n-re').textContent = String(Math.round(UL * 2 * K.R / ((K.tau - 0.5) / 3)));
+  $('r-re').textContent = fmt(UL * 2 * K.R / ((K.tau - 0.5) / 3), 0) + ' / ' + fmt(S.v * K.D / 1.56e-6 / 1e5, 1) + '×10⁵';
+  const st = $('status');
+  if (M.tripped) { st.textContent = 'Pod tripped'; setS(st, 'crit'); }
+  else if (M.g < 0.98 && S.load > 0) { st.textContent = 'Throttling to ' + fmt(M.g * 100, 0) + '%'; setS(st, 'warn'); }
+  else if (S.cool !== 0) { st.textContent = 'Degraded cooling'; setS(st, 'warn'); }
+  else { st.textContent = 'Nominal'; setS(st, 'ok'); }
+  // bandwidth ladder
+  const ext = S.wl === 0 ? 2.62e8 * act : 4e7 * act;
+  rungs.forEach(function (r, i) {
+    const v = r.dyn ? Math.max(ext, 1e5) : r.v;
+    $('rq' + i).textContent = r.dyn && ext < 1e5 ? 'idle' : bits(v);
+    $('rb' + i).style.width = clamp((Math.log10(v) - 8) / 8, 0.01, 1) * 100 + '%';
+  });
+  $('bw-insight').textContent = S.wl === 0
+    ? 'Inference sends about 4 KB per request, so 8,000 requests per second fill roughly a quarter of the satellite link. Weights stay in the pod.'
+    : 'Training gradients never leave the pod fabric. Only checkpoints and telemetry (about 40 Mb/s assumed) go up; loading a 1 PB dataset over 1 Gb/s would take about 93 days, so data goes down by ship.';
+}
+
+function bindSeg() {
+  document.querySelectorAll('.seg').forEach(function (seg) {
+    seg.addEventListener('click', function (e) {
+      const b = e.target.closest('button'); if (!b) return;
+      seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      S[seg.getAttribute('data-key')] = Number(b.getAttribute('data-val'));
+      dirty = true; updateUI();
+    });
+  });
+}
+function bindSlider(id, key, scale, text) {
+  const el = $(id), out = $('o-' + id.slice(2));
+  const apply = function () { S[key] = Number(el.value) * scale; out.textContent = text(S[key]); if (key === 'v') applyFlow(); dirty = true; };
+  el.addEventListener('input', function () { apply(); updateUI(); });
+  apply();
+}
+
+function resetAll() {
+  resetModel(); sim.init(); applyFlow();
+  M.ringF = bulkRise(); settle();
+  M.ringF = bulkRise(); settle();
+  sim.seedPlume(Math.max(0.01, 3 * bulkRise()));
+  const dtPhys = dx * UL / S.v;
+  const dep = (M.Qh / K.L) * dtPhys / (sim.hullCount * K.rcp * dx * dx);
+  sim.step(150, dep);
+  M.ringF = clamp(sim.ringMean(), 0, 8);
+  Tscale = Math.max(0.04, sim.maxT() * 0.75);
+  for (let i = 0; i < NT; i++) respawn(i, true);
+  A.t = 0; dirty = true;
+}
+
+/* ---------- main loop ---------- */
+let msEMA = 4, cap = 3, frameNo = 0, uiTick = 0;
+function advance(dtReal) {
+  const dtSim = dtReal * S.speed;
+  let rem = dtSim;
+  while (rem > 1e-6) { const h = Math.min(0.5, rem); stepModel(h); rem -= h; }
+  const dtPhys = dx * UL / S.v;
+  M.stepAcc += dtSim / dtPhys;
+  const whole = Math.floor(M.stepAcc), n = Math.min(whole, cap);
+  M.stepAcc -= whole;
+  if (n > 0) {
+    const dep = (M.Qh / K.L) * dtPhys / (sim.hullCount * K.rcp * dx * dx);
+    const t0 = performance.now();
+    sim.step(n, dep);
+    const ms = (performance.now() - t0) / n;
+    msEMA = lerp(msEMA, clamp(ms, 0.3, 40), 0.1);
+    cap = clamp(Math.floor(14 / msEMA), 1, 8);
+  }
+  moveTracers(Math.min(dtSim / dtPhys, cap));
+  M.ringF += (clamp(sim.ringMean(), 0, 8) - M.ringF) * Math.min(1, dtSim / 10);
+  Tscale += (Math.max(0.04, sim.maxT() * 0.75) - Tscale) * 0.05;
+  A.t += dtReal;
+  if (++frameNo % 120 === 0 && !sim.sane()) { sim.init(); applyFlow(); sim.seedPlume(Math.max(0.01, 3 * bulkRise())); }
+}
+function draw() { drawFlow(); drawHist(); drawCut(); drawCol(); }
+function tick(dtReal) {
+  let did = false;
+  if (!S.paused) { advance(dtReal); did = true; }
+  if (did || dirty) { draw(); dirty = false; }
+  if (++uiTick % 6 === 0) updateUI();
+}
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dtReal = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  tick(dtReal);
+}
+
+bindSeg();
+bindSlider('s-v', 'v', 1, (x) => fmt(x, 2) + ' m/s');
+bindSlider('s-load', 'load', 0.01, (x) => fmt(x * 100, 0) + '%');
+bindSlider('s-tsea', 'tsea', 1, (x) => fmt(x, 1) + ' °C');
+bindSlider('s-fin', 'fin', 1, (x) => '×' + fmt(x, 1));
+const bp = $('b-pause');
+bp.addEventListener('click', function () { S.paused = !S.paused; bp.textContent = S.paused ? 'Play' : 'Pause'; dirty = true; });
+$('b-reset').addEventListener('click', function () { resetAll(); updateUI(); });
+if (S.paused) bp.textContent = 'Play';
+document.querySelectorAll('.seg[data-key=speed] button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-val')) === S.speed)));
+
+resizeAll();
+resetAll();
+updateUI();
+window.__podSim = { tick, S, M, sim, updateUI, resetAll, draw };
+requestAnimationFrame(loop);
+})();
+</script>

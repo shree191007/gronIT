@@ -1,0 +1,785 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Neocloud Pod Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-height 3D viewport beside a control column; stacks on phones.
+   Dark-first, like the water it sits in. Heat reads amber to red against deep teal. */
+:root {
+  --bg: #0a161d; --surface: #0f1f28; --surface2: #162b37; --line: #223c4b;
+  --fg: #e4eef2; --muted: #93abb7; --accent: #f2a547; --accent-ink: #1a1204;
+  --cool: #5ec2d6; --danger: #ff7a63; --focus: #8fd3ff;
+  --font-ui: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf3f5; --surface: #ffffff; --surface2: #e2ebef; --line: #c5d4db;
+    --fg: #0e2530; --muted: #4c6a78; --accent: #a85200; --accent-ink: #ffffff;
+    --cool: #0a7388; --danger: #bf3520; --focus: #0a62b8; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf3f5; --surface: #ffffff; --surface2: #e2ebef; --line: #c5d4db;
+  --fg: #0e2530; --muted: #4c6a78; --accent: #a85200; --accent-ink: #ffffff;
+  --cool: #0a7388; --danger: #bf3520; --focus: #0a62b8; color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font-ui); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 380px; height: 100%; }
+.stage { position: relative; min-width: 0; min-height: 0; background: #061821; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.legend, .hint, .nogl { position: absolute; color: #d7e7ee; font-size: 12px; pointer-events: none; }
+.legend { top: 16px; left: 16px; display: grid; gap: 6px; width: min(240px, 60%); }
+.legend .bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #3a6f8f, #e2b24a 45%, #e5472e); }
+.legend .ticks { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 11px; color: #9fb8c4; }
+.legend b { font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; color: #b8d0da; }
+.hint { left: 16px; bottom: 14px; color: #8fb0be; font-size: 12px; }
+.nogl { inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; font-size: 14px; }
+
+.panel { overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line); padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.head h1 { margin: 0; font-size: 20px; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+.head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 46ch; }
+.sec { display: grid; gap: 10px; min-width: 0; }
+.lab { font-family: var(--font-num); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface2); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; text-align: left; }
+.seg button small { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
+.seg button[aria-checked="true"] { background: var(--bg); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+
+.geoms { display: grid; gap: 2px; }
+.geoms button { display: grid; grid-template-columns: minmax(0, 1fr) 76px 58px; align-items: center; gap: 10px; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; text-align: left; }
+.geoms button:hover:not(:disabled) { background: var(--surface2); }
+.geoms button[aria-checked="true"] { background: var(--surface2); box-shadow: inset 0 0 0 1px var(--accent); }
+.geoms button:disabled { opacity: .38; cursor: not-allowed; }
+.geoms .track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.geoms .fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.geoms .v { font-family: var(--font-num); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline; }
+.ctl label { color: var(--fg); }
+.ctl output { font-family: var(--font-num); font-size: 12.5px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 4px 0 0; }
+.ctl input:disabled { opacity: .4; }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+select { width: 100%; background: var(--surface2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.stat { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .n { font-family: var(--font-num); font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.stat .n i { font-style: normal; font-size: 12px; color: var(--muted); margin-left: 3px; }
+.stat.hot .n { color: var(--accent); }
+.stat.bad .n { color: var(--danger); }
+.stat.wide { grid-column: 1 / -1; }
+.note { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface2); font-size: 13px; }
+.note.warn { box-shadow: inset 3px 0 0 var(--danger); }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.checks label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checks input { accent-color: var(--accent); width: 16px; height: 16px; }
+.foot { color: var(--muted); font-size: 12px; margin: 0; }
+.foot b { color: var(--fg); font-weight: 500; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 56vh auto; height: auto; min-height: 100%; }
+  .stage { height: 56vh; }
+  .panel { overflow: visible; border-left: 0; border-top: 1px solid var(--line); padding-inline: 16px; }
+  .legend { width: min(200px, 56%); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main class="app">
+  <section class="stage" aria-label="3D view of the pods on the seabed">
+    <canvas id="view" aria-label="Interactive 3D view. Drag to orbit, scroll or pinch to zoom."></canvas>
+    <div class="legend" aria-hidden="true">
+      <b>Skin rise above sea</b>
+      <div class="bar"></div>
+      <div class="ticks"><span>0 K</span><span>10</span><span>20+ K</span></div>
+    </div>
+    <div class="hint" aria-hidden="true">Drag to orbit · scroll to zoom · plume is illustrative, shown ×3 speed</div>
+    <div class="nogl" id="nogl" hidden>This browser could not start WebGL, so the 3D view is off. The numbers on the right still work.</div>
+  </section>
+
+  <aside class="panel" aria-label="Pod settings and results">
+    <div class="head">
+      <h1>Neocloud pod simulator</h1>
+      <p>One shared heat load and volume, split across the pods you pick. Skin temperature comes from the same convection and hull model as the casing study.</p>
+    </div>
+
+    <div class="sec">
+      <span class="lab" id="lab-mode">Casing type</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lab-mode" id="mode">
+        <button type="button" role="radio" data-v="pc" aria-checked="true">Thin skin<small>Pressure-compensated</small></button>
+        <button type="button" role="radio" data-v="hull" aria-checked="false">Pressure hull<small>Dry inside, sized for depth</small></button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <span class="lab" id="lab-geom">Shape · skin rise at current settings</span>
+      <div class="geoms" role="radiogroup" aria-labelledby="lab-geom" id="geoms"></div>
+    </div>
+
+    <div class="sec">
+      <span class="lab">Conditions</span>
+      <div class="ctl"><label for="P">Heat load, all pods</label><output id="oP"></output><input id="P" type="range" min="20" max="200" step="10" value="100"></div>
+      <div class="ctl"><label for="V">Internal volume, all pods</label><output id="oV"></output><input id="V" type="range" min="10" max="40" step="2" value="20"></div>
+      <div class="ctl"><label for="U">Current speed</label><output id="oU"></output><input id="U" type="range" min="0" max="0.5" step="0.05" value="0"></div>
+      <div class="ctl"><label for="T">Seawater temperature</label><output id="oT"></output><input id="T" type="range" min="-1.8" max="4" step="0.1" value="1.5"></div>
+      <div class="ctl" id="depthWrap"><label for="D">Depth</label><output id="oD"></output><input id="D" type="range" min="200" max="1500" step="50" value="500"><small id="depthNote">Hull walls thicken with depth. Thin-skin pods ignore it.</small></div>
+    </div>
+
+    <div class="sec" id="matHull">
+      <span class="lab">Hull material</span>
+      <select id="hullMat" aria-label="Hull material"></select>
+    </div>
+    <div class="sec" id="matSkin" hidden>
+      <span class="lab">Skin</span>
+      <select id="skinMat" aria-label="Skin material"></select>
+      <div class="ctl"><label for="skinT">Skin thickness</label><output id="oS"></output><input id="skinT" type="range" min="3" max="12" step="1" value="6"></div>
+    </div>
+
+    <div class="sec">
+      <span class="lab">Result</span>
+      <div class="stats" id="stats"></div>
+      <p class="note" id="note"></p>
+    </div>
+
+    <div class="sec">
+      <span class="lab">View</span>
+      <div class="checks">
+        <label><input type="checkbox" id="plume" checked> Warm-water plume</label>
+        <label><input type="checkbox" id="spin"> Slow orbit</label>
+      </div>
+    </div>
+
+    <p class="foot"><b>How far to trust it.</b> Screening-level model: natural-convection coefficients are good to about ±30%, hull sizing ignores stiffening rings, and inner convection and rack packing are left out. Embodied-carbon ranges for titanium, composites and concrete are typical literature values.</p>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* Neocloud physics: JS port of casing_model.py (same correlations, same constants). */
+const PH = (() => {
+  const G = 9.81, CP = 3990;
+  const T_TAB = [0, 5, 10, 15, 20, 25, 30];
+  const MU_TAB = [1.88, 1.62, 1.40, 1.23, 1.08, 0.96, 0.86].map(x => x * 1e-3);
+  const RHO_TAB = [1028.1, 1027.7, 1026.9, 1025.9, 1024.7, 1023.3, 1021.7];
+  const K_TAB = [0.563, 0.571, 0.579, 0.587, 0.595, 0.603, 0.610];
+  const BETA_TAB = [5.1, 8.0, 10.8, 13.5, 16.1, 18.5, 20.7].map(x => x * 1e-5);
+  const SAFETY_P = 1.5, KDF_SPHERE = 0.4;
+
+  function interp(x, xs, ys) {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
+    let i = 0;
+    while (x > xs[i + 1]) i++;
+    const f = (x - xs[i]) / (xs[i + 1] - xs[i]);
+    return ys[i] + f * (ys[i + 1] - ys[i]);
+  }
+  function props(T) {
+    const mu = interp(T, T_TAB, MU_TAB), rho = interp(T, T_TAB, RHO_TAB);
+    const k = interp(T, T_TAB, K_TAB), beta = interp(T, T_TAB, BETA_TAB);
+    const nu = mu / rho, alpha = k / (rho * CP);
+    return { nu, alpha, k, beta, Pr: nu / alpha };
+  }
+  function cb(Re, Pr) {
+    return 0.3 + (0.62 * Math.sqrt(Re) * Math.cbrt(Pr)) / Math.pow(1 + Math.pow(0.4 / Pr, 2 / 3), 0.25) *
+      Math.pow(1 + Math.pow(Re / 282000, 5 / 8), 4 / 5);
+  }
+  const ccHoriz = (Ra, Pr) => Math.pow(0.60 + 0.387 * Math.pow(Ra, 1 / 6) / Math.pow(1 + Math.pow(0.559 / Pr, 9 / 16), 8 / 27), 2);
+  const ccVert = (Ra, Pr) => Math.pow(0.825 + 0.387 * Math.pow(Ra, 1 / 6) / Math.pow(1 + Math.pow(0.492 / Pr, 9 / 16), 8 / 27), 2);
+
+  function hSurface(s, Ts, env) {
+    const U = env.U, Tinf = env.Tinf;
+    const p = props(0.5 * (Ts + Tinf));
+    const dT = Math.max(Ts - Tinf, 1e-6);
+    const L = s.L, Pr = p.Pr, nu = p.nu, k = p.k;
+    const Ra = G * p.beta * dT * Math.pow(L, 3) / (nu * p.alpha);
+    let hn = 0, hf = 0;
+    if (s.kind === 'sphere') {
+      const Nus = 2 + 0.589 * Math.pow(Ra, 0.25) / Math.pow(1 + Math.pow(0.469 / Pr, 9 / 16), 4 / 9);
+      const Nut = ccHoriz(Ra, Pr);
+      hn = k / L * Math.max(Nus, Nut);
+      if (U > 0) {
+        const Re = U * L / nu;
+        hf = k / L * (2 + (0.4 * Math.sqrt(Re) + 0.06 * Math.pow(Re, 2 / 3)) * Math.pow(Pr, 0.4));
+      }
+    } else if (s.kind === 'hcyl') {
+      hn = k / L * ccHoriz(Ra, Pr);
+      if (U > 0) hf = k / L * cb(U * L / nu, Pr);
+    } else if (s.kind === 'vcyl' || s.kind === 'vplate') {
+      hn = k / L * ccVert(Ra, Pr);
+      if (U > 0) {
+        if (s.kind === 'vcyl' && s.D) hf = k / s.D * cb(U * s.D / nu, Pr);
+        else hf = k / L * 0.664 * Math.sqrt(U * L / nu) * Math.cbrt(Pr);
+      }
+    } else if (s.kind === 'top' || s.kind === 'bottom') {
+      const Nu = s.kind === 'top' ? (Ra > 1e7 ? 0.15 * Math.cbrt(Ra) : 0.54 * Math.pow(Ra, 0.25)) : 0.27 * Math.pow(Ra, 0.25);
+      hn = k / L * Nu;
+      if (U > 0) hf = k / L * 0.664 * Math.sqrt(U * L / nu) * Math.cbrt(Pr);
+    }
+    const ns = env.natScale || 1;
+    return Math.cbrt(Math.pow(ns * hn, 3) + Math.pow(hf, 3));
+  }
+
+  function solveSkin(surfaces, P, env, Rwall, fins) {
+    const Q = Ts => {
+      let q = 0;
+      for (const s of surfaces) {
+        const h = hSurface(s, Ts, env);
+        if (fins && s === fins.on) {
+          const m = Math.sqrt(2 * h / (fins.k * fins.t));
+          const Hc = fins.H + fins.t / 2;
+          const eta = Math.tanh(m * Hc) / (m * Hc);
+          const Abase = s.A - fins.N * fins.t * fins.Lf;
+          const Afin = fins.N * (2 * fins.H + fins.t) * fins.Lf;
+          q += h * (Abase + eta * Afin) * (Ts - env.Tinf);
+        } else q += h * s.A * (Ts - env.Tinf);
+      }
+      return q;
+    };
+    let lo = env.Tinf + 1e-4, hi = env.Tinf + 300;
+    for (let i = 0; i < 80; i++) {
+      const mid = 0.5 * (lo + hi);
+      if (Q(mid) > P) hi = mid; else lo = mid;
+    }
+    const Ts = 0.5 * (lo + hi);
+    let Awet = surfaces.reduce((a, s) => a + s.A, 0);
+    if (fins) Awet += fins.N * (2 * fins.H + fins.t) * fins.Lf - fins.N * fins.t * fins.Lf;
+    const dTs = Ts - env.Tinf;
+    return { dT_skin: dTs, dT_inner: dTs + P * Rwall, A_wet: Awet, flux: P / Awet, h_eff: P / (Awet * dTs) };
+  }
+
+  /* ---------- materials (hull) ---------- */
+  const MATS = {
+    'HSLA steel':   { rho: 7850, E: 205e9, nu: 0.30, s: 355e6, k: 45.0, co2: [0.5, 2.0] },
+    'Duplex 2205':  { rho: 7800, E: 200e9, nu: 0.30, s: 450e6, k: 15.0, co2: [3.0, 6.0] },
+    'Ti-6Al-4V':    { rho: 4430, E: 114e9, nu: 0.34, s: 880e6, k: 6.7, co2: [30.0, 45.0] },
+    'Al 5083':      { rho: 2660, E: 70e9, nu: 0.33, s: 215e6, k: 117.0, co2: [0.5, 10.1] },
+    'GFRP':         { rho: 1900, E: 30e9, nu: 0.25, s: 400e6, k: 0.4, co2: [3.0, 8.0] },
+    'CFRP':         { rho: 1550, E: 70e9, nu: 0.25, s: 600e6, k: 0.7, co2: [20.0, 40.0] },
+    'UHPC':         { rho: 2500, E: 50e9, nu: 0.20, s: 150e6, k: 2.0, co2: [0.25, 0.45], sphereOnly: true },
+  };
+  const SKINS = {
+    'Al 5083':   { rho: 2660, k: 117.0, co2: [0.5, 10.1] },
+    'HSLA steel': { rho: 7850, k: 45.0, co2: [0.5, 2.0] },
+    'HDPE':      { rho: 950, k: 0.45, co2: null },
+  };
+  const pDesign = depth => SAFETY_P * 1027 * G * depth;
+
+  function tSphere(m, ri, p) {
+    const x = 1.5 * p / m.s;
+    if (x >= 1) return NaN;
+    const ty = ri * (Math.pow(1 - x, -1 / 3) - 1);
+    let t = ty;
+    for (let i = 0; i < 50; i++) {
+      const R = ri + t / 2;
+      const tb = R * Math.sqrt(p * Math.sqrt(3 * (1 - m.nu * m.nu)) / (2 * m.E * KDF_SPHERE));
+      t = Math.max(ty, tb);
+    }
+    return t;
+  }
+  function pcrWT(m, t, Dm, L) {
+    const x = t / Dm;
+    return 2.42 * m.E * Math.pow(x, 2.5) / (Math.pow(1 - m.nu * m.nu, 0.75) * (L / Dm - 0.45 * Math.sqrt(x)));
+  }
+  function tCyl(m, ri, Lc, p) {
+    const x = 2 * p / m.s;
+    if (x >= 1) return NaN;
+    const ty = ri * (Math.pow(1 - x, -0.5) - 1);
+    const f = t => pcrWT(m, t, 2 * (ri + t / 2), Lc) - p;
+    let lo = 1e-4, hi = 0.8 * ri, tb;
+    if (f(lo) * f(hi) > 0) tb = 0.8 * ri;
+    else {
+      for (let i = 0; i < 100; i++) {
+        const mid = 0.5 * (lo + hi);
+        if (f(lo) * f(mid) <= 0) hi = mid; else lo = mid;
+      }
+      tb = 0.5 * (lo + hi);
+    }
+    return Math.max(ty, tb);
+  }
+  const capsuleDims = (AR, V) => {
+    const ri = Math.cbrt(V / (Math.PI * (2 * AR - 2 / 3)));
+    return { ri, Lc: 2 * ri * (AR - 1) };
+  };
+
+  /* ---------- geometry catalogue ---------- */
+  const GEOMS = [
+    { id: 'sph1',  label: '1 sphere',           type: 'sphere',  n: 1,  pc: true, hull: true },
+    { id: 'sph4',  label: '4 spheres',          type: 'sphere',  n: 4,  pc: true, hull: true },
+    { id: 'sph16', label: '16 spheres',         type: 'sphere',  n: 16, pc: true, hull: true },
+    { id: 'cap2',  label: 'Capsule, L/D 2',     type: 'capsule', AR: 2, n: 1, hull: true },
+    { id: 'cap3',  label: 'Capsule, L/D 3',     type: 'capsule', AR: 3, n: 1, pc: true, hull: true },
+    { id: 'cap4',  label: 'Capsule, L/D 4',     type: 'capsule', AR: 4, n: 1, hull: true },
+    { id: 'cap6',  label: 'Capsule, L/D 6',     type: 'capsule', AR: 6, n: 1, pc: true, hull: true },
+    { id: 'cap3f', label: 'Capsule L/D 3 + fins', type: 'capsule', AR: 3, n: 1, fins: true, pc: true },
+    { id: 'cube',  label: 'Cube',               type: 'box', box: [1, 1, 1], n: 1, pc: true },
+    { id: 'tower', label: 'Tower 2 × 2 × 5 m',  type: 'box', box: [2, 2, 5], n: 1, pc: true },
+    { id: 'slab',  label: 'Slab 1 × 5 × 5',     type: 'box', box: [1, 5, 5], n: 1, pc: true },
+  ];
+
+  /* Returns {surfaces, fins, dims} for outer envelope given inner volume V. skinT in m (pc) */
+  function envelope(g, V) {
+    if (g.type === 'sphere') {
+      const Vp = V / g.n, ri = Math.cbrt(3 * Vp / (4 * Math.PI));
+      return { ri, D: 2 * ri };
+    }
+    if (g.type === 'capsule') return capsuleDims(g.AR, V);
+    const [a0, b0, c0] = g.box, sc = Math.cbrt(V / (a0 * b0 * c0));
+    return { a: a0 * sc, b: b0 * sc, c: c0 * sc };
+  }
+
+  /* Pressure-compensated pod with thin skin */
+  function pcCase(g, env, skinName, skinT) {
+    const sk = SKINS[skinName], V = env.V, e = envelope(g, V);
+    let surfaces = [], cylS = null;
+    if (g.type === 'sphere') {
+      surfaces = [{ A: g.n * Math.PI * e.D * e.D, kind: 'sphere', L: e.D }];
+    } else if (g.type === 'capsule') {
+      surfaces.push({ A: 4 * Math.PI * e.ri * e.ri, kind: 'sphere', L: 2 * e.ri });
+      if (e.Lc > 0) {
+        cylS = { A: 2 * Math.PI * e.ri * e.Lc, kind: 'hcyl', L: 2 * e.ri, D: 2 * e.ri };
+        surfaces.push(cylS);
+      }
+    } else {
+      const side = 2 * (e.a + e.b) * e.c, per = 2 * (e.a + e.b);
+      surfaces = [{ A: side, kind: 'vplate', L: e.c },
+        { A: e.a * e.b, kind: 'top', L: e.a * e.b / per },
+        { A: e.a * e.b, kind: 'bottom', L: e.a * e.b / per }];
+    }
+    const A = surfaces.reduce((s, x) => s + x.A, 0);
+    const Rw = skinT / (sk.k * A);
+    let fins = null;
+    if (g.fins && cylS) fins = { on: cylS, N: 16, H: 0.12, t: 0.006, k: sk.k, Lf: cylS.A / (Math.PI * cylS.D) };
+    const res = solveSkin(surfaces, env.P, env, Rw, fins);
+    const mass = A * skinT * sk.rho;
+    return Object.assign({ mode: 'pc', A_bare: A, mass_t: mass / 1e3, t_wall_mm: skinT * 1e3,
+      co2: sk.co2 ? [mass * sk.co2[0] / 1e3, mass * sk.co2[1] / 1e3] : null, env: e }, res);
+  }
+
+  /* Pressure-resisting hull */
+  function hullCase(g, env, matName) {
+    const m = MATS[matName];
+    if (!g.hull) return null;
+    if (m.sphereOnly && !(g.type === 'sphere')) return null;
+    const p = pDesign(env.depth), Vp = env.V / g.n;
+    const AR = g.type === 'sphere' ? 1 : g.AR;
+    const { ri, Lc } = capsuleDims(AR, Vp);
+    const ts = tSphere(m, ri, p);
+    const tc = AR === 1 ? 0 : tCyl(m, ri, Lc, p);
+    if (!isFinite(ts) || !isFinite(tc)) return null;
+    const roS = ri + ts, roC = ri + tc;
+    const vol = 4 / 3 * Math.PI * (Math.pow(roS, 3) - Math.pow(ri, 3)) + (Lc > 0 ? Math.PI * (roC * roC - ri * ri) * Lc : 0);
+    const mass = m.rho * vol * g.n;
+    const surfaces = [{ A: g.n * 4 * Math.PI * roS * roS, kind: 'sphere', L: 2 * roS }];
+    let Rinv = 1 / ((1 / ri - 1 / roS) / (4 * Math.PI * m.k));
+    if (Lc > 0) {
+      surfaces.push({ A: 2 * Math.PI * roC * Lc, kind: 'hcyl', L: 2 * roC, D: 2 * roC });
+      Rinv += 1 / (Math.log(roC / ri) / (2 * Math.PI * m.k * Lc));
+    }
+    const Rwall = 1 / (Rinv * g.n);
+    const res = solveSkin(surfaces, env.P, env, Rwall, null);
+    return Object.assign({ mode: 'hull', t_head_mm: ts * 1e3, t_cyl_mm: tc * 1e3, t_wall_mm: Math.max(ts, tc) * 1e3,
+      mass_t: mass / 1e3, co2: [mass * m.co2[0] / 1e3, mass * m.co2[1] / 1e3], env: { ri, Lc, roS, roC } }, res);
+  }
+
+  return { props, hSurface, solveSkin, MATS, SKINS, GEOMS, envelope, pcCase, hullCase, pDesign, capsuleDims };
+})();
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const st = { mode: 'pc', geom: 'sph1', P: 100, V: 20, U: 0, Tinf: 1.5, depth: 500,
+               hullMat: 'HSLA steel', skinMat: 'Al 5083', skinT: 6, plume: true, spin: false };
+  const GEOMS = PH.GEOMS;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmt = (x, d = 1) => (Math.abs(x) >= 1000 ? x.toFixed(0) : x.toFixed(d));
+
+  /* ---------- model glue ---------- */
+  const envOf = () => ({ Tinf: st.Tinf, U: st.U, V: st.V, P: st.P * 1e3, depth: st.depth });
+  function evalGeom(g, env) {
+    if (st.mode === 'pc') return g.pc ? PH.pcCase(g, env, st.skinMat, st.skinT / 1e3) : null;
+    return g.hull ? PH.hullCase(g, env, st.hullMat) : null;
+  }
+  function capacityAt(g, dT) {          // heat (kW) that holds the skin at +dT K
+    let lo = 1e3, hi = 4e6;
+    for (let i = 0; i < 28; i++) {
+      const mid = 0.5 * (lo + hi), e = { ...envOf(), P: mid }, r = evalGeom(g, e);
+      if (!r) return NaN;
+      if (r.dT_skin > dT) hi = mid; else lo = mid;
+    }
+    return 0.5 * (lo + hi) / 1e3;
+  }
+
+  /* ---------- UI ---------- */
+  const hullSel = $('hullMat'), skinSel = $('skinMat');
+  Object.keys(PH.MATS).forEach(k => hullSel.add(new Option(k === 'UHPC' ? 'UHPC concrete (spheres only)' : k, k)));
+  Object.keys(PH.SKINS).forEach(k => skinSel.add(new Option(k, k)));
+
+  function buildList(results) {
+    const wrap = $('geoms');
+    if (!wrap.children.length) {
+      GEOMS.forEach(g => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.id = g.id;
+        b.innerHTML = '<span class="nm"></span><span class="track"><span class="fill" style="display:block"></span></span><span class="v"></span>';
+        b.addEventListener('click', () => { st.geom = g.id; resetCamera = true; update(); });
+        wrap.appendChild(b);
+      });
+    }
+    [...wrap.children].forEach((b, i) => {
+      const g = GEOMS[i], r = results[g.id];
+      b.querySelector('.nm').textContent = g.label;
+      b.disabled = !r;
+      b.setAttribute('aria-checked', String(g.id === st.geom));
+      b.querySelector('.fill').style.width = r ? Math.min(100, r.dT_skin / 20 * 100) + '%' : '0%';
+      b.querySelector('.v').textContent = r ? '+' + fmt(r.dT_skin) + ' K' : 'n/a';
+      b.hidden = false;
+    });
+  }
+
+  function stat(k, n, unit, cls) {
+    return `<div class="stat ${cls || ''}"><div class="k">${k}</div><div class="n">${n}<i>${unit || ''}</i></div></div>`;
+  }
+  function dimsText(g, r) {
+    const e = r.env;
+    if (g.type === 'sphere') return (g.n > 1 ? g.n + ' × ' : '') + 'Ø ' + fmt((st.mode === 'hull' ? 2 * (e.ri + r.t_head_mm / 1e3) : e.D), 2) + ' m';
+    if (g.type === 'capsule') return fmt(e.Lc + 2 * e.ri * 1, 1) + ' × Ø ' + fmt(2 * e.ri, 2) + ' m';
+    return fmt(e.a, 1) + ' × ' + fmt(e.b, 1) + ' × ' + fmt(e.c, 1) + ' m';
+  }
+
+  let cur = null;
+  function update() {
+    const env = envOf();
+    const results = {};
+    GEOMS.forEach(g => { results[g.id] = evalGeom(g, env); });
+    if (!results[st.geom]) st.geom = GEOMS.find(g => results[g.id]).id;
+    const g = GEOMS.find(x => x.id === st.geom), r = results[st.geom];
+    cur = r;
+
+    /* control text */
+    $('oP').textContent = st.P + ' kW'; $('oV').textContent = st.V + ' m³';
+    $('oU').textContent = st.U.toFixed(2) + ' m/s'; $('oT').textContent = st.Tinf.toFixed(1) + ' °C';
+    $('oD').textContent = st.depth + ' m'; $('oS').textContent = st.skinT + ' mm';
+    $('D').disabled = st.mode === 'pc';
+    $('matHull').hidden = st.mode !== 'hull'; $('matSkin').hidden = st.mode !== 'pc';
+    [...$('mode').children].forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === st.mode)));
+    buildList(results);
+
+    /* stats */
+    const wallRise = r.dT_inner - r.dT_skin;
+    const co2 = r.co2 ? fmt(r.co2[0], r.co2[1] < 10 ? 1 : 0) + '–' + fmt(r.co2[1], r.co2[1] < 10 ? 1 : 0) : 'n/a';
+    const cap = capacityAt(g, 5);
+    let s = '';
+    s += stat('Skin rise', '+' + fmt(r.dT_skin), 'K', r.dT_skin > 12 ? 'bad' : 'hot');
+    s += stat('Inside of wall', '+' + fmt(r.dT_inner), 'K', wallRise > 15 ? 'bad' : '');
+    s += stat('Wetted area', fmt(r.A_wet), 'm²');
+    s += stat('Heat per m²', fmt(r.flux / 1e3, 2), 'kW');
+    s += stat('Effective h', fmt(r.h_eff, 0), 'W/m²K');
+    s += stat('Holds +5 K at', isFinite(cap) ? fmt(cap, 0) : 'n/a', 'kW');
+    s += stat(st.mode === 'hull' ? 'Wall thickness' : 'Skin thickness', st.mode === 'hull' && g.type === 'capsule' ? fmt(r.t_head_mm, 0) + ' / ' + fmt(r.t_cyl_mm, 0) : fmt(r.t_wall_mm, r.t_wall_mm < 10 ? 1 : 0), 'mm');
+    s += stat('Casing mass', fmt(r.mass_t, 2), 't');
+    s += stat('Embodied CO₂e', co2, r.co2 ? 't' : '');
+    s += stat('Pod size', dimsText(g, r), '');
+    $('stats').innerHTML = s;
+
+    const note = $('note');
+    note.className = 'note';
+    if (wallRise > 15) {
+      note.classList.add('warn');
+      note.textContent = `The wall alone drops ${fmt(wallRise, 0)} K at this load, so heat cannot pass through it. It has to leave through a fluid loop or metal inserts.`;
+    } else if (r.dT_skin > 12) {
+      note.classList.add('warn');
+      note.textContent = `The skin runs ${fmt(r.dT_skin)} K above the sea. Split the load across more pods, lower it, or put the pods in a current.`;
+    } else {
+      const sph = results.sph1, base = sph ? ` A single sphere would run +${fmt(sph.dT_skin)} K.` : '';
+      note.textContent = `Skin sits ${fmt(r.dT_skin)} K above the sea; the wall adds ${fmt(wallRise, 1)} K.${base}`;
+    }
+    scene3d.refresh(g, r);
+  }
+
+  /* ---------- controls wiring ---------- */
+  $('mode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    st.mode = b.dataset.v; update();
+  });
+  [['P', 'P'], ['V', 'V'], ['U', 'U'], ['T', 'Tinf'], ['D', 'depth'], ['skinT', 'skinT']].forEach(([id, key]) =>
+    $(id).addEventListener('input', e => { st[key] = parseFloat(e.target.value); if (key === 'V' || key === 'skinT' || key === 'depth') resetCamera = key === 'V'; update(); }));
+  hullSel.addEventListener('change', () => { st.hullMat = hullSel.value; update(); });
+  skinSel.addEventListener('change', () => { st.skinMat = skinSel.value; update(); });
+  $('plume').addEventListener('change', e => { st.plume = e.target.checked; scene3d.setPlume(); });
+  $('spin').addEventListener('change', e => { st.spin = e.target.checked; scene3d.setSpin(); });
+
+  /* ---------- 3D scene ---------- */
+  let resetCamera = true;
+  const scene3d = (() => {
+    const canvas = $('view');
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    } catch (err) { $('nogl').hidden = false; return { refresh() {}, setPlume() {}, setSpin() {} }; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const scene = new THREE.Scene();
+    const FOG = 0x061821;
+    scene.background = new THREE.Color(FOG);
+    scene.fog = new THREE.FogExp2(FOG, 0.021);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
+    const controls = new THREE.OrbitControls(camera, canvas);
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04; controls.minDistance = 2.5; controls.maxDistance = 70;
+    controls.autoRotateSpeed = 0.6;
+
+    scene.add(new THREE.HemisphereLight(0x7cc3d8, 0x0a1218, 0.85));
+    const sun = new THREE.DirectionalLight(0xcdeaf5, 0.95); sun.position.set(-8, 22, 10); scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x2f6f86, 0.35); fill.position.set(10, 4, -8); scene.add(fill);
+
+    /* seabed: flat under the pods, gently rolling further out */
+    const sea = new THREE.PlaneGeometry(160, 160, 120, 120); sea.rotateX(-Math.PI / 2);
+    const sp = sea.attributes.position, col = new Float32Array(sp.count * 3);
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i), z = sp.getZ(i), d = Math.hypot(x, z);
+      const k = Math.min(1, Math.max(0, (d - 9) / 16)), kk = k * k * (3 - 2 * k);
+      const h = 0.35 * (Math.sin(x * 0.21) * Math.cos(z * 0.17) + 0.5 * Math.sin(x * 0.53 + z * 0.37)) * kk;
+      sp.setY(i, h);
+      const shade = 0.9 + 0.1 * Math.sin(x * 1.7) * Math.cos(z * 1.3);
+      col[i * 3] = 0.34 * shade; col[i * 3 + 1] = 0.40 * shade; col[i * 3 + 2] = 0.41 * shade;
+    }
+    sea.setAttribute('color', new THREE.BufferAttribute(col, 3)); sea.computeVertexNormals();
+    const floor = new THREE.Mesh(sea, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }));
+    scene.add(floor);
+
+    const shTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 8, 64, 64, 64);
+      g.addColorStop(0, 'rgba(0,0,0,.62)'); g.addColorStop(0.55, 'rgba(0,0,0,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    })();
+    const shMat = new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false, fog: false });
+    const podGroup = new THREE.Group(); scene.add(podGroup);
+    const podMat = new THREE.MeshStandardMaterial({ color: 0x3a6f8f, roughness: 0.4, metalness: 0.35, emissive: 0x000000 });
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18 });
+
+    /* heat colour: cold steel-blue to amber to red */
+    const STOPS = [[0, [0.23, 0.44, 0.56]], [0.45, [0.89, 0.70, 0.29]], [1, [0.90, 0.28, 0.18]]];
+    function heatRGB(t) {
+      t = Math.min(1, Math.max(0, t));
+      for (let i = 1; i < STOPS.length; i++) if (t <= STOPS[i][0]) {
+        const a = STOPS[i - 1], b = STOPS[i], f = (t - a[0]) / (b[0] - a[0]);
+        return [0, 1, 2].map(c => a[1][c] + f * (b[1][c] - a[1][c]));
+      }
+      return STOPS[2][1];
+    }
+
+    /* ---- plume + marine snow ---- */
+    const NP = 2600;
+    const pPos = new Float32Array(NP * 3), pCol = new Float32Array(NP * 3);
+    const pAge = new Float32Array(NP), pLife = new Float32Array(NP), pV = new Float32Array(NP);
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+    function dot() {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.4, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+    const tex = dot();
+    const plume = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.26, map: tex, vertexColors: true, transparent: true,
+      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true, fog: false }));
+    plume.frustumCulled = false; scene.add(plume);
+
+    const NS = 700, sPos = new Float32Array(NS * 3);
+    for (let i = 0; i < NS; i++) { sPos[i * 3] = (Math.random() - .5) * 60; sPos[i * 3 + 1] = Math.random() * 16; sPos[i * 3 + 2] = (Math.random() - .5) * 60; }
+    const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+    const snow = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.07, map: tex, color: 0x9fc7d6, transparent: true, opacity: 0.55,
+      depthWrite: false, sizeAttenuation: true }));
+    scene.add(snow);
+
+    /* current direction arrow, shown only when there is a current */
+    const arrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-6, 0.6, 0), 3, 0x7fd8e8, 0.5, 0.3);
+    scene.add(arrow);
+
+    /* ---- pod builder ---- */
+    let emitters = [], extent = 6;
+    function disposeGroup() {
+      while (podGroup.children.length) {
+        const o = podGroup.children.pop();
+        o.traverse(m => { if (m.geometry) m.geometry.dispose(); });
+      }
+    }
+    function layout(n, size) {
+      if (n === 1) return [[0, 0]];
+      const side = Math.sqrt(n), gap = size * 2.3, out = [];
+      for (let i = 0; i < side; i++) for (let j = 0; j < side; j++) out.push([(i - (side - 1) / 2) * gap, (j - (side - 1) / 2) * gap]);
+      return out;
+    }
+    function randUnit() {
+      const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u);
+      return [s * Math.cos(a), u, s * Math.sin(a)];
+    }
+    function build(g, r) {
+      disposeGroup(); emitters = [];
+      const shadow = (x, z, sx, sz) => {
+        const sg = new THREE.PlaneGeometry(sx, sz); sg.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(sg, shMat); m.position.set(x, 0.03, z); m.renderOrder = -1; podGroup.add(m);
+      };
+      const mesh = (geo, x, y, z) => { const m = new THREE.Mesh(geo, podMat); m.position.set(x, y, z); podGroup.add(m); return m; };
+      if (g.type === 'sphere') {
+        const R = st.mode === 'hull' ? r.env.ri + r.t_head_mm / 1e3 : r.env.ri;
+        layout(g.n, 2 * R).forEach(([x, z]) => {
+          mesh(new THREE.SphereGeometry(R, 56, 36), x, R, z); shadow(x, z, R * 3.4, R * 3.4);
+          emitters.push(() => { let n; do { n = randUnit(); } while (n[1] < -0.25); return [x + n[0] * R * 1.02, R + n[1] * R * 1.02, z + n[2] * R * 1.02]; });
+        });
+        extent = Math.max(2 * R * 2.2 * Math.sqrt(g.n), 6);
+      } else if (g.type === 'capsule') {
+        const R = st.mode === 'hull' ? r.env.ri + r.t_cyl_mm / 1e3 : r.env.ri, Lc = r.env.Lc;
+        const cyl = new THREE.CylinderGeometry(R, R, Lc, 56, 1, true); cyl.rotateX(Math.PI / 2);
+        mesh(cyl, 0, R, 0); shadow(0, 0, R * 3.4, Lc + R * 3.4);
+        const hs = new THREE.SphereGeometry(R, 56, 20, 0, Math.PI * 2, 0, Math.PI / 2);
+        const h1 = hs.clone(); h1.rotateX(Math.PI / 2); mesh(h1, 0, R, Lc / 2);
+        const h2 = hs.clone(); h2.rotateX(-Math.PI / 2); mesh(h2, 0, R, -Lc / 2);
+        if (g.fins) {
+          const fl = new THREE.BoxGeometry(0.03, 0.12, Lc);
+          for (let k = 0; k < 16; k++) {
+            const a = k / 16 * Math.PI * 2, m = mesh(fl.clone(), Math.cos(a) * (R + 0.06), R + Math.sin(a) * (R + 0.06), 0);
+            m.rotation.z = a - Math.PI / 2;
+          }
+        }
+        const aCyl = 2 * Math.PI * R * Lc, aHd = 4 * Math.PI * R * R;
+        emitters.push(() => {
+          let p; do {
+            if (Math.random() < aCyl / (aCyl + aHd)) {
+              const a = Math.random() * Math.PI * 2; p = [Math.cos(a), Math.sin(a), 0]; var z = (Math.random() - .5) * Lc; p = [p[0] * R * 1.02, R + p[1] * R * 1.02, z];
+            } else {
+              const n = randUnit(), s = Math.random() < .5 ? 1 : -1; if (n[2] * s < 0) n[2] = -n[2];
+              p = [n[0] * R * 1.02, R + n[1] * R * 1.02, s * (Lc / 2 + n[2] * R * 1.02)];
+            }
+          } while (p[1] < R * 0.55);
+          return p;
+        });
+        extent = Math.max(Lc + 2 * R, 6);
+      } else {
+        const e = r.env;
+        const m = mesh(new THREE.BoxGeometry(e.a, e.c, e.b), 0, e.c / 2, 0);
+        shadow(0, 0, e.a + 2.4, e.b + 2.4);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), edgeMat); edges.position.copy(m.position); podGroup.add(edges);
+        const aS = 2 * (e.a + e.b) * e.c, aT = e.a * e.b;
+        emitters.push(() => {
+          if (Math.random() < aT / (aS + aT)) return [(Math.random() - .5) * e.a, e.c + 0.02, (Math.random() - .5) * e.b];
+          const side = Math.random() * 2 * (e.a + e.b); let x, z;
+          if (side < e.a) { x = side - e.a / 2; z = e.b / 2 + .02; } else if (side < e.a + e.b) { x = e.a / 2 + .02; z = side - e.a - e.b / 2; }
+          else if (side < 2 * e.a + e.b) { x = side - e.a - e.b - e.a / 2; z = -e.b / 2 - .02; } else { x = -e.a / 2 - .02; z = side - 2 * e.a - e.b - e.b / 2; }
+          return [x, Math.random() * e.c, z];
+        });
+        extent = Math.max(e.a, e.b, e.c, 5) * 1.4;
+      }
+      for (let i = 0; i < NP; i++) respawn(i, true);
+      arrow.position.set(-extent * 0.9, 0.8, 0);
+    }
+    function respawn(i, scatter) {
+      const e = emitters[(Math.random() * emitters.length) | 0] || (() => [0, 1, 0]);
+      const p = e();
+      pPos[i * 3] = p[0]; pPos[i * 3 + 1] = p[1]; pPos[i * 3 + 2] = p[2];
+      pLife[i] = 9 + Math.random() * 9; pV[i] = 0.5 + Math.random() * 0.7;
+      pAge[i] = scatter ? Math.random() * pLife[i] : 0;
+    }
+
+    function recolor(r) {
+      const t = r.dT_skin / 20, c = heatRGB(t);
+      podMat.color.setRGB(c[0], c[1], c[2]);
+      podMat.emissive.setRGB(c[0] * 0.28, c[1] * 0.28, c[2] * 0.28);
+      const mat = st.mode === 'hull' ? PH.MATS[st.hullMat] : null;
+      podMat.roughness = mat && mat.k < 5 ? 0.78 : 0.4; podMat.metalness = mat && mat.k < 5 ? 0.05 : 0.35;
+    }
+    let lastKey = '';
+    function refresh(g, r) {
+      recolor(r);
+      arrow.visible = st.U > 0;
+      if (st.U > 0) arrow.setLength(1 + st.U * 8, 0.5, 0.3);
+      const key = [st.mode, g.id, st.V, st.mode === 'hull' ? st.hullMat + st.depth : st.skinMat + st.skinT].join('|');
+      if (key !== lastKey) {
+        lastKey = key; build(g, r);
+        if (resetCamera) {
+          const d = extent * 1.15 + 3;
+          camera.position.set(d * 0.75, d * 0.62 + 1.6, d * 0.95);
+          controls.target.set(0, Math.min(2, extent * 0.12), 0); controls.update(); resetCamera = false;
+        }
+      }
+      if (reduceMotion) { for (let i = 0; i < NP; i++) respawn(i, true); stepPlume(0); render(); }
+    }
+
+    /* ---- per-frame ---- */
+    const TS = 3;
+    function stepPlume(dt) {
+      if (!cur) return;
+      const dT = cur.dT_skin, U = st.U;
+      const active = Math.round(NP * Math.min(1, Math.max(0.2, st.P / 200)));
+      for (let i = 0; i < NP; i++) {
+        const j = i * 3;
+        if (i >= active || !st.plume) { pCol[j] = pCol[j + 1] = pCol[j + 2] = 0; continue; }
+        pAge[i] += dt;
+        if (pAge[i] > pLife[i]) respawn(i, false);
+        const age = pAge[i], a = age / pLife[i];
+        const vx = U * TS * Math.min(1, age / 2);
+        const vy = (0.05 + 0.022 * dT) * TS * pV[i] * Math.exp(-age / 7);
+        pPos[j] += (vx + (Math.random() - .5) * 0.5) * dt;
+        pPos[j + 1] += vy * dt + (Math.random() - .5) * 0.18 * dt;
+        pPos[j + 2] += (Math.random() - .5) * 0.5 * dt;
+        const f = Math.min(1, dT * Math.exp(-age / 4) / 20);
+        const c = heatRGB(f), fade = 0.8 * Math.pow(1 - a, 1.6) * Math.min(1, age * 2) * (0.25 + 0.75 * Math.min(1, dT / 8));
+        pCol[j] = c[0] * fade; pCol[j + 1] = c[1] * fade; pCol[j + 2] = c[2] * fade;
+      }
+      pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
+    }
+    function stepSnow(dt) {
+      const vx = st.U * TS + 0.04;
+      for (let i = 0; i < NS; i++) {
+        const j = i * 3;
+        sPos[j] += vx * dt; sPos[j + 1] -= 0.03 * dt; sPos[j + 2] += (Math.random() - .5) * 0.06 * dt;
+        if (sPos[j] > 30) sPos[j] -= 60; if (sPos[j + 1] < 0) sPos[j + 1] += 16;
+      }
+      sGeo.attributes.position.needsUpdate = true;
+    }
+    function render() { controls.update(); renderer.render(scene, camera); }
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (!reduceMotion) { stepPlume(dt); stepSnow(dt); }
+      render(); requestAnimationFrame(loop);
+    }
+    function resize() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+      if (reduceMotion) render();
+    }
+    new ResizeObserver(resize).observe(canvas); resize();
+    if (reduceMotion) controls.addEventListener('change', render);
+    requestAnimationFrame(loop);
+    window.__neocloud = { camera, controls, renderer, scene };
+    return {
+      refresh,
+      setPlume() { if (reduceMotion) { stepPlume(0); render(); } },
+      setSpin() { controls.autoRotate = st.spin && !reduceMotion; },
+    };
+  })();
+
+  update();
+})();
+</script>
+
+</body></html>

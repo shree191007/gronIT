@@ -4,3 +4,5 @@ node_modules/
 simulator/app.js
 *.png
 .env
+.venv/
+.DS_Store

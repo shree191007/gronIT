@@ -5,7 +5,7 @@ numbers behind the ideathon pitch.
 
 | Folder | What it is |
 |---|---|
-| `simulator/` | Interactive 1 MW pod flow simulator (single HTML page; lattice-Boltzmann heat flow, coolant loop, throttling, data and power path). `python build.py` assembles `index.html`. |
+| `simulator/` | Interactive 1 MW pod flow simulator (single HTML page; lattice-Boltzmann heat flow, coolant loop, throttling, data and power path). `python build.py` assembles `index.html` and `site/simulator.html`. |
 | `backend/` | Python backend that pulls real wind, wave, current and temperature data and tests the simulator and capex assumptions. See `backend/README.md`. Data cache included, runs offline. |
 | `models/` | Capex and cost-per-GPU-hour model, power-cost levers, sensitivity runs, pod thermal/availability sizing. |
 | `docs/` | Pitch text and the latest assumption-test report. |

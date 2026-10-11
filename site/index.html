@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antarctic Neocloud</title><style>
+:root{--bg:#0b1620;--bar:#10202c;--line:#223646;--fg:#e6eef5;--mut:#8fa5b6;--acc:#4aa3d8}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px -apple-system,BlinkMacSystemFont,sans-serif}
+header{display:flex;align-items:center;gap:20px;padding:0 16px;background:var(--bar);border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+h1{font-size:15px;font-weight:600;margin:0;white-space:nowrap}
+nav{display:flex;gap:2px}
+nav button{font:inherit;color:var(--mut);background:none;border:0;border-bottom:2px solid transparent;padding:14px 12px;cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--fg)}nav button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--acc)}
+main{flex:1;position:relative}iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+iframe:not(.on){display:none}
+</style></head><body>
+<header><h1>Antarctic Neocloud</h1><nav role="tablist">
+<button role="tab" data-id="siting">Siting</button>
+<button role="tab" data-id="pod">Pod Simulator</button>
+<button role="tab" data-id="simulator">1 MW Pod Flow</button>
+</nav></header>
+<main>
+<iframe data-id="siting" data-src="siting.html" title="Antarctic Neocloud Siting"></iframe>
+<iframe data-id="pod" data-src="pod.html" title="Neocloud Pod Simulator"></iframe>
+<iframe data-id="simulator" data-src="simulator.html" title="1 MW Pod Flow Simulator"></iframe>
+</main>
+<script>
+const tabs=[...document.querySelectorAll("nav button")],frames=[...document.querySelectorAll("iframe")];
+function show(id){
+  if(!tabs.some(t=>t.dataset.id===id))id=tabs[0].dataset.id;
+  tabs.forEach(t=>t.setAttribute("aria-selected",t.dataset.id===id));
+  frames.forEach(f=>{const on=f.dataset.id===id;f.classList.toggle("on",on);if(on&&!f.src)f.src=f.dataset.src});
+}
+tabs.forEach(t=>t.onclick=()=>{location.hash=t.dataset.id});
+addEventListener("hashchange",()=>show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script></body></html>

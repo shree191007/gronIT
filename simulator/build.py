@@ -5,6 +5,8 @@ solver = open(os.path.join(d, "solver.js"), encoding="utf-8").read()
 assert "/*__SOLVER__*/" in tpl
 out = tpl.replace("/*__SOLVER__*/", solver)
 open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(out)
+# the published site (GitHub Pages) serves its own copy
+open(os.path.join(d, "..", "site", "simulator.html"), "w", encoding="utf-8").write(out)
 # extract script for syntax check
 s = out.index("<script>") + len("<script>")
 e = out.index("</script>")

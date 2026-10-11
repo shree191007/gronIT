@@ -9,7 +9,7 @@ with the numbers behind it, and says what to change in the simulator.
 pip install -r requirements.txt
 python -m neocloud fetch            # downloads and caches data (about 15 minutes, needs internet)
 python -m neocloud run              # runs all checks from the cache, writes out/report.md, report.json, site_presets.json
-python -m neocloud serve            # API on http://localhost:8000/docs
+python -m neocloud serve            # everything on http://localhost:8000 (pages at /, API docs at /docs)
 pytest -q                           # offline unit tests
 ```
 `data_cache/` ships with the downloaded data, so `run`, `serve` and `pytest` work offline.
@@ -32,6 +32,9 @@ C5 can the hull reject 0.96 MW, C6 bulk plume warming, C7 wind resource, C8 wind
 
 Assumptions tagged [A] in `neocloud/config.py` are our own (fouling, inner-side h, service sea-state
 limit, plume limit) and drive some verdicts; thresholds are in `THRESH`. Edit and rerun.
+
+## Web pages
+`/` is a single-page site (`site/`, also published on GitHub Pages) with tabs for the siting map, the 3D pod simulator and the 1 MW pod flow simulator. Pages are also reachable directly: `/siting`, `/pod`, `/simulator`.
 
 ## API
 `GET /sites`, `/assumptions`, `/check/{C1..C9}?site=drake`, `/report?site=drake&refresh=false`, `/presets`

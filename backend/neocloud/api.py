@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from . import report as rep, checks
+from . import report as rep, checks, web
 from .config import SITES, SIM, HEAT, LIMITS, THRESH, OUT_DIR
 from .data import SiteData
 
@@ -66,3 +66,7 @@ def presets():
     if not path.exists():
         raise HTTPException(404, "run the report first")
     return json.loads(path.read_text())
+
+
+# registered last so the API routes above win over /{page}
+app.include_router(web.router)
